@@ -1,0 +1,156 @@
+name: Preserve
+version: 0.3.0
+description: Privacy-preserving PII detection and scrubbing for LLM inference queries
+license: Apache-2.0
+
+architecture:
+  layer1_normalcy:
+    module: preserve/normalcy.py
+    description: Scores text regions by how normal (non-personal) they look
+    status: complete
+
+  layer2_detection:
+    sublayers:
+      2a_regex:
+        module: preserve/patterns.py
+        description: 49+ regex patterns covering 13+ countries
+        patterns: 49+
+        countries: [US, UK, Finland, Canada, France, Germany, Brazil, India, Mexico, Spain, Italy, South Korea, Japan, Netherlands]
+        status: complete
+      2b_domain_parsers:
+        module: preserve/domain_parsers.py
+        libraries: [phonenumbers, email-validator, dateparser]
+        status: complete
+      2c_checksum:
+        module: preserve/validators.py
+        algorithms: [Luhn, IBAN-mod97, HETU-mod31, DNI-letter, NIE-letter, CPF, BSN-11proof, NHS-mod11, RRN-mod]
+        status: complete
+      2d_context_scoring:
+        module: preserve/context.py
+        status: complete
+      2e_allowlist:
+        module: preserve/allowlist.py
+        status: complete
+      2f_obfuscation:
+        module: preserve/obfuscation.py
+        handles: [email-at-dot, spelled-digits, unicode-homoglyphs, separator-words]
+        status: complete
+      2g_ner:
+        module: preserve/detectors.py
+        requires: spacy
+        status: optional
+      2h_name_scorer:
+        module: preserve/name_scorer.py
+        libraries: [names-dataset, wordfreq]
+        passes: [capitalized-words, lowercase-gazetteer-pairs, initial-surname, paren-reveals, context-single-names]
+        memory: ~150MB
+        speed: "<10ms per document"
+        status: complete
+
+  layer3_llm_review:
+    module: preserve/llm_review.py
+    model: Qwen3.5-0.8B Q4_K_M (508 MB GGUF)
+    backends:
+      server:
+        binary: vendor/llama.cpp/build/bin/llama-server
+        launch: scripts/start_llm_server.sh [gpu|cpu]
+        flags: "--reasoning off"
+        supports: [CPU, GPU-CUDA]
+      embedded:
+        requires: llama-cpp-python
+    prompt_design:
+      approach: "Full text with >>>..<<< marked suspicious regions"
+      mode: "selected (1-2 best-matching examples from bank)"
+      no_system_message: true
+      output: JSON array
+    status: complete
+
+pipeline:
+  scrubber: preserve/scrubber.py
+  mapping: preserve/mapping.py
+  audit: preserve/audit.py
+  client: preserve/client.py
+  structured: preserve/structured.py
+  cli: preserve/__main__.py
+  api: DeepInfra (OpenAI-compatible)
+
+interfaces:
+  library: "from preserve import Scrubber"
+  cli: "python -m preserve scrub/detect/scrub-file/scrub-csv"
+  dashboard: "python dashboard.py (Gradio, localhost:7860)"
+  structured: "StructuredScrubber for CSV/dict with column-aware classification"
+
+benchmarks:
+  clean_data:
+    date: 2026-04-06
+    rows: 100
+    pii_items: 1200
+    layer2_only: 99.8%
+    columns_at_100pct: [date_of_birth, email, phone, national_id, passport_number, bank_account, credit_card, ip_address, emergency_contact_phone]
+    columns_at_99pct: [full_name, address]
+    columns_at_98pct: [emergency_contact_name]
+
+  messy_data:
+    date: 2026-04-06
+    cases: 23
+    pii_items: 82
+    layer2_only: 87.8%
+    layer2_plus_llm: "~87% on 10 hardest cases"
+    handles: [no-caps, abbreviations, typos, run-on, informal, copy-paste, mixed-language, obfuscated, partial, medical-shorthand, chat-style]
+
+  evolution:
+    - { stage: "regex only", clean: 72.6%, messy: "~70%" }
+    - { stage: "+ domain parsers", clean: 77.6% }
+    - { stage: "+ name scorer", clean: 89.8% }
+    - { stage: "+ new patterns (passport, bank, address)", clean: 99.8% }
+    - { stage: "+ lowercase names, context singles, initials", messy: 87.8% }
+
+  llm_standalone:
+    date: 2026-03-30
+    model: Qwen3.5-0.8B-Q4_K_M
+    f1: 0.644
+    precision: 0.679
+    recall: 0.613
+    avg_time_cpu: 6.87s
+    report: docs/LLM_BENCHMARK.md
+    full_results: tests/benchmark_results.tsv
+
+testing:
+  unit_tests: 73
+  false_positive_tests: 21
+  clean_dataset: tests/test_data.csv (100 rows, 29 columns, 15 countries)
+  messy_dataset: tests/messy_test_data.json (23 cases, 12 messiness types)
+  scripts:
+    - scripts/benchmark_llm.py
+    - scripts/benchmark_full_pipeline.py
+    - scripts/test_prompt_modes.py
+    - tests/test_against_dataset.py
+
+dependencies:
+  core:
+    - openai>=1.0.0
+    - pydantic>=2.0
+    - python-dotenv>=1.0.0
+    - phonenumbers>=9.0.0
+    - email-validator>=2.0.0
+    - dateparser>=1.0.0
+    - names-dataset>=3.0.0
+    - wordfreq>=3.0.0
+  optional:
+    ner: spacy>=3.0
+    embedded_llm: llama-cpp-python>=0.3.0
+    server_llm: vendor/llama.cpp (built from source)
+    dashboard: gradio>=6.0
+  dev: [pytest>=7.0, pytest-mock>=3.0, huggingface-hub]
+
+docs:
+  - docs/PRIVACY_TAXONOMY.md (threat model, attack vectors, defense layers)
+  - docs/DEEPINFRA_ANALYSIS.md (provider privacy assessment, gap analysis)
+  - docs/PROVIDER_COMPARISON.md (scoring rubric, DeepInfra 30/50)
+  - docs/LLM_BENCHMARK.md (Layer 3 model comparison, backend comparison, prompt modes)
+
+known_limitations:
+  - Single common-word names ("Kim", "Grace") need context to detect
+  - Deliberately redacted partial data ("SSN ending in 6789") partially caught
+  - Streaming responses not supported
+  - GPU inference throttles on laptops (thermal)

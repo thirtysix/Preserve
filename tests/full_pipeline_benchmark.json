@@ -1,0 +1,215 @@
+[
+  {
+    "label": "A: Layer 2 only (regex)",
+    "total_detected": 871,
+    "total_pii_values": 1200,
+    "detection_rate": 72.6,
+    "total_time_s": 0.1,
+    "avg_time_per_row_s": 0.0,
+    "round_trips_ok": 100,
+    "per_column": {
+      "full_name": {
+        "detected": 0,
+        "total": 100,
+        "rate": 0.0
+      },
+      "date_of_birth": {
+        "detected": 54,
+        "total": 100,
+        "rate": 54.0
+      },
+      "email": {
+        "detected": 87,
+        "total": 100,
+        "rate": 87.0
+      },
+      "phone": {
+        "detected": 100,
+        "total": 100,
+        "rate": 100.0
+      },
+      "national_id": {
+        "detected": 99,
+        "total": 100,
+        "rate": 99.0
+      },
+      "passport_number": {
+        "detected": 26,
+        "total": 100,
+        "rate": 26.0
+      },
+      "bank_account": {
+        "detected": 85,
+        "total": 100,
+        "rate": 85.0
+      },
+      "credit_card": {
+        "detected": 100,
+        "total": 100,
+        "rate": 100.0
+      },
+      "ip_address": {
+        "detected": 100,
+        "total": 100,
+        "rate": 100.0
+      },
+      "address": {
+        "detected": 32,
+        "total": 100,
+        "rate": 32.0
+      },
+      "emergency_contact_name": {
+        "detected": 88,
+        "total": 100,
+        "rate": 88.0
+      },
+      "emergency_contact_phone": {
+        "detected": 100,
+        "total": 100,
+        "rate": 100.0
+      }
+    }
+  },
+  {
+    "label": "B: Layer 1+2 (normalcy + regex)",
+    "total_detected": 871,
+    "total_pii_values": 1200,
+    "detection_rate": 72.6,
+    "total_time_s": 0.1,
+    "avg_time_per_row_s": 0.0,
+    "round_trips_ok": 100,
+    "per_column": {
+      "full_name": {
+        "detected": 0,
+        "total": 100,
+        "rate": 0.0
+      },
+      "date_of_birth": {
+        "detected": 54,
+        "total": 100,
+        "rate": 54.0
+      },
+      "email": {
+        "detected": 87,
+        "total": 100,
+        "rate": 87.0
+      },
+      "phone": {
+        "detected": 100,
+        "total": 100,
+        "rate": 100.0
+      },
+      "national_id": {
+        "detected": 99,
+        "total": 100,
+        "rate": 99.0
+      },
+      "passport_number": {
+        "detected": 26,
+        "total": 100,
+        "rate": 26.0
+      },
+      "bank_account": {
+        "detected": 85,
+        "total": 100,
+        "rate": 85.0
+      },
+      "credit_card": {
+        "detected": 100,
+        "total": 100,
+        "rate": 100.0
+      },
+      "ip_address": {
+        "detected": 100,
+        "total": 100,
+        "rate": 100.0
+      },
+      "address": {
+        "detected": 32,
+        "total": 100,
+        "rate": 32.0
+      },
+      "emergency_contact_name": {
+        "detected": 88,
+        "total": 100,
+        "rate": 88.0
+      },
+      "emergency_contact_phone": {
+        "detected": 100,
+        "total": 100,
+        "rate": 100.0
+      }
+    }
+  },
+  {
+    "label": "C: Layer 1+2+3 (normalcy + regex + LLM 0.8B)",
+    "total_detected": 871,
+    "total_pii_values": 1200,
+    "detection_rate": 72.6,
+    "total_time_s": 1985.3,
+    "avg_time_per_row_s": 19.85,
+    "round_trips_ok": 100,
+    "per_column": {
+      "full_name": {
+        "detected": 0,
+        "total": 100,
+        "rate": 0.0
+      },
+      "date_of_birth": {
+        "detected": 54,
+        "total": 100,
+        "rate": 54.0
+      },
+      "email": {
+        "detected": 87,
+        "total": 100,
+        "rate": 87.0
+      },
+      "phone": {
+        "detected": 100,
+        "total": 100,
+        "rate": 100.0
+      },
+      "national_id": {
+        "detected": 99,
+        "total": 100,
+        "rate": 99.0
+      },
+      "passport_number": {
+        "detected": 26,
+        "total": 100,
+        "rate": 26.0
+      },
+      "bank_account": {
+        "detected": 85,
+        "total": 100,
+        "rate": 85.0
+      },
+      "credit_card": {
+        "detected": 100,
+        "total": 100,
+        "rate": 100.0
+      },
+      "ip_address": {
+        "detected": 100,
+        "total": 100,
+        "rate": 100.0
+      },
+      "address": {
+        "detected": 32,
+        "total": 100,
+        "rate": 32.0
+      },
+      "emergency_contact_name": {
+        "detected": 88,
+        "total": 100,
+        "rate": 88.0
+      },
+      "emergency_contact_phone": {
+        "detected": 100,
+        "total": 100,
+        "rate": 100.0
+      }
+    }
+  }
+]
