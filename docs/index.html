@@ -18,9 +18,17 @@
       </p>
     </header>
 
+    <div class="privacy" role="note">
+      <span class="lock" aria-hidden="true">&#128274;</span>
+      <div>
+        <strong>100% private — your text never leaves this browser.</strong>
+        No network requests, no server, no logging. Detection runs entirely in client-side
+        JavaScript on your device. <span class="privacy-sub">(Open your browser's network tab and watch — nothing is sent.)</span>
+      </div>
+    </div>
+
     <div class="notice">
-      <strong>This demo runs entirely in your browser</strong> — nothing is sent anywhere.
-      It implements the <strong>deterministic</strong> detection layers only:
+      This demo implements the <strong>deterministic</strong> detection layers only:
       <strong>52 regex patterns</strong> (Layer&nbsp;2a) across 15+ countries and
       <strong>9 checksum validators</strong> (Layer&nbsp;2c: Luhn, IBAN, CPF, DNI/NIE, BSN, NHS, HETU, RRN).
       The full tool adds a gazetteer-based name scorer and an optional local LLM (Layer&nbsp;3)

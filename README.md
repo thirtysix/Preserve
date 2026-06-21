@@ -73,7 +73,7 @@ Layer 3 model comparison over the 16-case benchmark set (Qwen3.5, Q4_K_M). GPU f
 | Qwen3.5-2B | 2.0 GB | 10.29s | **0.39s** | ~26× |
 | Qwen3.5-4B | 3.6 GB | 24.17s | **1.74s** | ~14× |
 
-All three models fit comfortably in 6 GB VRAM; peak GPU temperature was 82 °C with no thermal throttling. Full methodology in [`docs/LLM_BENCHMARK.md`](docs/LLM_BENCHMARK.md).
+All three models fit comfortably in 6 GB VRAM. Full methodology in [`docs/LLM_BENCHMARK.md`](docs/LLM_BENCHMARK.md).
 
 ## Quick Start
 
@@ -99,7 +99,11 @@ response = client.chat([
 print(response.text)  # PII scrubbed before sending, restored in response
 ```
 
-## Scrub Without Sending
+## Scrub and Restore
+
+Every redaction is reversible. `scrub()` returns a `placeholder_map` that maps each
+placeholder back to its original value, so you can restore the real data locally — either
+the original text or, more usefully, a model's **response** that still contains placeholders.
 
 ```python
 from preserve import Scrubber, PreserveConfig, SensitivityLevel
@@ -111,13 +115,27 @@ config = PreserveConfig(
 scrubber = Scrubber(config)
 
 result = scrubber.scrub("Patient aurora rossi, SSN 123-45-6789, at Via Roma 31")
-print(result.sanitized_text)   # "Patient [NAME_1], SSN [SSN_1], at [ADDRESS_1]"
-print(result.pii_summary)      # {'NAME': 1, 'SSN': 1, 'ADDRESS': 1}
 
-# Restore
+print(result.sanitized_text)        # "Patient [NAME_1], SSN [SSN_1], at [ADDRESS_1]"
+print(result.pii_summary)           # {'NAME': 1, 'SSN': 1, 'ADDRESS': 1}
+
+# Inspect the reversible mapping (placeholder -> original value)
+print(result.placeholder_map.entries())
+# {'[NAME_1]': 'aurora rossi', '[SSN_1]': '123-45-6789', '[ADDRESS_1]': 'Via Roma 31'}
+
+# Restore the original text exactly
 restored = scrubber.restore(result.sanitized_text, result.placeholder_map)
 assert restored == result.original_text
+
+# In practice you send `sanitized_text` to the LLM and restore its *response*,
+# which comes back referencing the same placeholders:
+model_response = "Schedule a follow-up for [NAME_1]; verify [SSN_1] on file."
+print(scrubber.restore(model_response, result.placeholder_map))
+# "Schedule a follow-up for aurora rossi; verify 123-45-6789 on file."
 ```
+
+The mapping also serializes (`placeholder_map.to_dict()` / `PlaceholderMap.from_dict(...)`),
+so the scrub and restore steps can happen in different processes — useful for the API setup below.
 
 ## International PII Coverage (49+ patterns)
 
@@ -157,19 +175,56 @@ Preserve handles real-world text, not just clean data:
 For PII that regex can't catch (bare names in informal text, natural-language dates, custom ID formats):
 
 ```bash
-# Download model (508 MB)
-python scripts/download_model.py --model 0.8B --quant Q4_K_M
-
-# Option A: Server backend (fastest, GPU-capable)
-./scripts/start_llm_server.sh gpu   # or: cpu
-# Then in Python:
-config = PreserveConfig(use_llm_review=True, llm_backend="server")
-
-# Option B: Embedded backend (no server needed, CPU only)
-config = PreserveConfig(use_llm_review=True, llm_backend="embedded")
+# Download a bundled Qwen3.5 GGUF (helper supports presets 0.8B / 2B / 4B):
+python scripts/download_model.py --model 0.8B --quant Q4_K_M   # Qwen3.5-0.8B Q4_K_M, ~533 MB
+# python scripts/download_model.py --model 2B --quant Q4_K_M    # Qwen3.5-2B,  ~1.4 GB
+# python scripts/download_model.py --model 4B --quant Q8_0      # Qwen3.5-4B,  larger/higher quality
+# python scripts/download_model.py --list                       # show all preset size/quant combos
 ```
 
-> GPU inference requires the native `llama-server` (built with CUDA). The embedded `llama-cpp-python` backend is CPU-only. See [`docs/LLM_BENCHMARK.md`](docs/LLM_BENCHMARK.md).
+```python
+# Option A: Server backend (fastest, GPU-capable)
+config = PreserveConfig(use_llm_review=True, llm_backend="server")   # start the server first (below)
+
+# Option B: Embedded backend (no server needed, CPU only)
+config = PreserveConfig(use_llm_review=True, llm_backend="embedded",
+                        llm_model_path="models/Qwen3.5-0.8B-Q4_K_M.gguf")
+```
+
+```bash
+# Start the native server (used by backend="server"):
+./scripts/start_llm_server.sh gpu   # or: cpu
+```
+
+### Using a different model
+
+Preserve works with **any GGUF model** — the Qwen3.5 presets are just convenient defaults.
+To use another model (e.g. from Hugging Face), download the `.gguf` and point Preserve at it
+by its full path. For example, with a Llama or Mistral GGUF:
+
+```bash
+# Download any GGUF (repo + filename are the model's full names on Hugging Face):
+huggingface-cli download bartowski/Llama-3.2-3B-Instruct-GGUF \
+    Llama-3.2-3B-Instruct-Q4_K_M.gguf --local-dir models/
+```
+
+```python
+# Embedded backend — just set the path:
+config = PreserveConfig(use_llm_review=True, llm_backend="embedded",
+                        llm_model_path="models/Llama-3.2-3B-Instruct-Q4_K_M.gguf")
+```
+
+```bash
+# Server backend — launch llama-server on that file, then use llm_backend="server":
+vendor/llama.cpp/build/bin/llama-server -m models/Llama-3.2-3B-Instruct-Q4_K_M.gguf \
+    -ngl 99 --reasoning off --host 127.0.0.1 --port 8090
+```
+
+> Larger models detect more but run slower; see the [inference table](#layer-3-inference-speed).
+> GPU inference requires the native `llama-server` (built with CUDA). The embedded
+> `llama-cpp-python` backend is CPU-only. Instruction-tuned models with a "thinking" mode
+> (like Qwen3.5) must have it disabled — Preserve does this automatically. See
+> [`docs/LLM_BENCHMARK.md`](docs/LLM_BENCHMARK.md).
 
 ## Configuration
 

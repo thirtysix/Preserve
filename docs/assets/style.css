@@ -11,6 +11,9 @@
   --code-bg: #f0f2f5;
   --pass: #15803d;
   --fail: #b45309;
+  --privacy-bg: #e9f9ef;
+  --privacy-border: #9bdcb4;
+  --privacy-strong: #137a3c;
   --shadow: 0 1px 3px rgba(0,0,0,.06), 0 1px 2px rgba(0,0,0,.04);
 }
 @media (prefers-color-scheme: dark) {
@@ -18,6 +21,7 @@
     --bg: #0d1117; --panel: #161b22; --border: #2d333b; --text: #e6edf3;
     --muted: #9198a1; --accent: #4d8bff; --accent-soft: #16243d; --mark: #5c4a12;
     --mark-border: #d2a02c; --code-bg: #1c2330; --pass: #4ade80; --fail: #fbbf24;
+    --privacy-bg: #0f2a1a; --privacy-border: #1f5236; --privacy-strong: #4ade80;
     --shadow: 0 1px 3px rgba(0,0,0,.4);
   }
 }
@@ -33,8 +37,19 @@ header p.sub { margin: 0 0 6px; color: var(--muted); }
 .links a { color: var(--accent); text-decoration: none; margin-right: 14px; font-size: 14px; }
 .links a:hover { text-decoration: underline; }
 
+.privacy {
+  display: flex; align-items: center; gap: 14px;
+  margin: 18px 0 12px; padding: 14px 18px; border-radius: 10px;
+  background: var(--privacy-bg); border: 1px solid var(--privacy-border);
+  box-shadow: var(--shadow);
+}
+.privacy .lock { font-size: 26px; line-height: 1; flex: none; }
+.privacy strong { color: var(--privacy-strong); font-size: 15.5px; }
+.privacy div { font-size: 14px; color: var(--text); }
+.privacy .privacy-sub { color: var(--muted); }
+
 .notice {
-  margin: 18px 0 22px; padding: 12px 14px; border: 1px solid var(--border);
+  margin: 0 0 22px; padding: 12px 14px; border: 1px solid var(--border);
   border-left: 3px solid var(--accent); border-radius: 8px; background: var(--panel);
   font-size: 13.5px; color: var(--muted);
 }
