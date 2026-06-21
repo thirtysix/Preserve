@@ -146,7 +146,15 @@ The benchmarks below were run using the **embedded (llama-cpp-python)** backend 
 ## Notes
 
 - This benchmark tests Layer 3 in **isolation** (LLM only, no regex or normalcy scanner). The full three-layer pipeline combines regex pattern matching (Layer 2) with LLM review (Layer 3), where regex handles structured PII and the LLM catches contextual PII that regex misses. Combined performance is expected to be significantly higher.
-- Inference times are CPU-only on 8 threads. GPU acceleration would reduce times substantially.
+- The per-model accuracy table above used CPU inference. GPU acceleration (native `llama-server`, `-ngl 99` full offload on an RTX 3060 6 GB Laptop GPU) was measured separately over the same 16-case set:
+
+  | Model | CPU avg/case | GPU avg/case | GPU median | Speedup |
+  |-------|-------------|-------------|-----------|---------|
+  | Qwen3.5-0.8B | 6.87s | 0.56s | 0.19s | ~12× |
+  | Qwen3.5-2B | 10.29s | 0.39s | 0.14s | ~26× |
+  | Qwen3.5-4B | 24.17s | 1.74s | 0.86s | ~14× |
+
+  All layers offloaded to GPU (0.8B/2B: 25/25, 4B: 33/33); VRAM use 1.2/2.0/3.6 GB respectively (all fit in 6 GB). Peak GPU temperature 82 °C during the 4B run — no thermal throttling observed. Measured 2026-06-21.
 - The Q4_K_M quantization was used for all models. Higher quantization (Q8_0) may improve accuracy at the cost of memory and speed.
 
 ## Backend Comparison (Qwen3.5-0.8B, same test case)
@@ -155,7 +163,7 @@ The benchmarks below were run using the **embedded (llama-cpp-python)** backend 
 |---------|--------|----------|-------|
 | llama-cpp-python (embedded) | CPU 4 threads | 23.1s | Python bindings, in-process |
 | llama-server (native) | CPU 4 threads | 18.5s | ~20% faster, native C++ HTTP server |
-| llama-server (native) | GPU (RTX 3060 6GB) | TBD | Expected <1s (pending stability testing) |
+| llama-server (native) | GPU (RTX 3060 6GB) | 0.56s | 16-case mean (median 0.19s); confirms the sub-1s expectation |
 
 The native llama-server backend is recommended for production use. It provides:
 - ~20% faster inference than the Python bindings on CPU
