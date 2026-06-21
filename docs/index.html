@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Preserve — PII detection demo</title>
+  <meta name="description" content="Browser demo of Preserve's deterministic PII detection (regex + checksum validation). Runs entirely client-side." />
+  <link rel="stylesheet" href="assets/style.css" />
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1><span class="tag">Preserve</span> — PII detection demo</h1>
+      <p class="sub">Detects and scrubs personally identifiable information, then maps it to reversible placeholders.</p>
+      <p class="links">
+        <a href="https://github.com/thirtysix/Preserve">GitHub repo</a>
+        <a href="https://github.com/thirtysix/Preserve/blob/main/docs/LLM_BENCHMARK.md">Benchmarks</a>
+      </p>
+    </header>
+
+    <div class="notice">
+      <strong>This demo runs entirely in your browser</strong> — nothing is sent anywhere.
+      It implements the <strong>deterministic</strong> detection layers only:
+      <strong>52 regex patterns</strong> (Layer&nbsp;2a) across 15+ countries and
+      <strong>9 checksum validators</strong> (Layer&nbsp;2c: Luhn, IBAN, CPF, DNI/NIE, BSN, NHS, HETU, RRN).
+      The full tool adds a gazetteer-based name scorer and an optional local LLM (Layer&nbsp;3)
+      that catch contextual PII like bare lowercase names — those require the Python package.
+    </div>
+
+    <div class="controls">
+      <div class="field">
+        <label for="sensitivity">Sensitivity</label>
+        <select id="sensitivity">
+          <option value="minimal">Minimal — structured PII only</option>
+          <option value="standard" selected>Standard — + phones, IPs, dates</option>
+          <option value="aggressive">Aggressive — + names, addresses</option>
+        </select>
+      </div>
+      <button id="clear">Clear</button>
+    </div>
+
+    <div class="examples" id="examples"></div>
+
+    <textarea id="input" spellcheck="false" placeholder="Type or paste text containing PII…"></textarea>
+
+    <div class="grid">
+      <div class="card">
+        <h2>Detected (highlighted)</h2>
+        <div class="body" id="highlight"></div>
+      </div>
+      <div class="card">
+        <h2>Scrubbed output</h2>
+        <div class="body" id="scrubbed"></div>
+      </div>
+    </div>
+
+    <div class="summary" id="summary"></div>
+    <div class="stat" id="stat"></div>
+    <div id="table"></div>
+
+    <footer>
+      Reversible: each placeholder like <code>[EMAIL_1]</code> maps back to the original value locally.
+      Part of <a href="https://github.com/thirtysix/Preserve">Preserve</a> · MIT License.
+      Patterns are exported verbatim from the Python library, so this demo stays in sync with the real detector.
+    </footer>
+  </div>
+
+  <script src="assets/patterns.js"></script>
+  <script src="assets/context.js"></script>
+  <script src="assets/examples.js"></script>
+  <script src="assets/app.js"></script>
+</body>
+</html>
