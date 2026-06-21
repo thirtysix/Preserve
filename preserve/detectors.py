@@ -165,16 +165,15 @@ class PIIDetector:
         matches = self._apply_allowlist(matches)
 
         # === LAYER 3: Local LLM review ===
-        # Only fires when there are suspicious regions that Layer 2 didn't cover.
-        # Additional gate: skip if Layer 2 already has high average confidence
-        # (meaning the text is well-covered and the LLM won't add much).
+        # Only fires when there are suspicious regions that Layer 2 didn't cover
+        # *and* the smart gate (_should_run_llm_review) judges them worth the cost.
         if self._llm_reviewer and suspicious_spans:
             uncovered_spans = self._find_uncovered_spans(
                 suspicious_spans, matches
             )
-            # Gate: check if the uncovered area is significant
-            total_uncovered = sum(e - s for s, e in uncovered_spans) if uncovered_spans else 0
-            if uncovered_spans and total_uncovered > 5:
+            if self._should_run_llm_review(
+                scan_text, suspicious_spans, uncovered_spans, matches
+            ):
                 llm_detections = self._llm_reviewer.review_text(
                     scan_text, uncovered_spans
                 )
@@ -430,6 +429,63 @@ class PIIDetector:
             detection_layer="obfuscation",
             confidence=norm_match.confidence * 0.9,  # Slight penalty for indirect detection
         )
+
+    def _should_run_llm_review(
+        self,
+        scan_text: str,
+        suspicious_spans: list[tuple[int, int]],
+        uncovered_spans: list[tuple[int, int]],
+        matches: list[PIIMatch],
+    ) -> bool:
+        """Smart gate deciding whether Layer 3 LLM review is worth running.
+
+        The old gate ("total uncovered chars > 5") was crude: it summed raw
+        character counts across every uncovered fragment, so it fired on stray
+        whitespace/punctuation and on scattered tiny gaps, and it never used the
+        confidence Layer 2 had already established. This gate instead:
+
+          1. **Content gate** — requires at least one *single* uncovered span with
+             enough alphanumeric content to plausibly hold PII. Scattered fragments
+             that are individually trivial no longer trigger a review.
+          2. **Confidence gate** — skips review when Layer 2 already covers most of
+             the suspicious region with high-confidence detections; the local LLM
+             rarely adds anything there and the call isn't worth the latency.
+        """
+        if not uncovered_spans:
+            return False
+
+        # (1) Content gate: is any individual uncovered span substantial?
+        min_chars = self.config.llm_min_uncovered_chars
+        has_substantial = any(
+            sum(ch.isalnum() for ch in scan_text[s:e]) >= min_chars
+            for s, e in uncovered_spans
+        )
+        if not has_substantial:
+            return False
+
+        # (2) Confidence gate: if the suspicious region is already mostly covered
+        # by confident Layer 2 matches, the residue is most likely noise.
+        overlapping = [
+            m
+            for m in matches
+            if any(m.start < e and m.end > s for s, e in suspicious_spans)
+        ]
+        if overlapping:
+            suspicious_len = sum(e - s for s, e in suspicious_spans)
+            uncovered_len = sum(e - s for s, e in uncovered_spans)
+            coverage = (
+                (suspicious_len - uncovered_len) / suspicious_len
+                if suspicious_len
+                else 0.0
+            )
+            mean_conf = sum(m.confidence for m in overlapping) / len(overlapping)
+            if (
+                coverage >= self.config.llm_skip_coverage
+                and mean_conf >= self.config.llm_skip_confidence
+            ):
+                return False
+
+        return True
 
     @staticmethod
     def _find_uncovered_spans(

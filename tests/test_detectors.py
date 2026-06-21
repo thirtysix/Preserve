@@ -3,7 +3,7 @@
 import pytest
 
 from preserve.config import PreserveConfig, SensitivityLevel
-from preserve.detectors import PIIDetector
+from preserve.detectors import PIIDetector, PIIMatch
 
 # Fixtures (detector_minimal, detector_standard, detector_aggressive)
 # are defined in conftest.py as session-scoped to avoid reloading datasets.
@@ -38,6 +38,72 @@ class TestSSNDetection:
         # Should not match as SSN (wrong format)
         ssn_matches = [m for m in matches if m.replacement_type == "SSN"]
         assert len(ssn_matches) == 0
+
+
+class TestLayer3Gate:
+    """The smart gate that decides whether Layer 3 LLM review is worth running."""
+
+    @staticmethod
+    def _match(start, end, confidence):
+        return PIIMatch(
+            start=start,
+            end=end,
+            matched_text="x" * (end - start),
+            pattern_name="test",
+            replacement_type="TEST",
+            sensitivity=SensitivityLevel.STANDARD,
+            confidence=confidence,
+        )
+
+    def test_no_uncovered_spans_skips(self, detector_standard):
+        assert not detector_standard._should_run_llm_review("abc", [(0, 3)], [], [])
+
+    def test_substantial_uncovered_span_runs(self, detector_standard):
+        # 7 alphanumeric chars, nothing from Layer 2 -> review.
+        text = "Acme Corp months later"
+        assert detector_standard._should_run_llm_review(text, [(0, 9)], [(0, 9)], [])
+
+    def test_scattered_whitespace_punct_does_not_run(self, detector_standard):
+        # Old gate summed raw chars and would fire; alnum-per-span gate must not.
+        text = ".  -  ,  ?"
+        assert not detector_standard._should_run_llm_review(
+            text, [(0, len(text))], [(0, len(text))], []
+        )
+
+    def test_many_tiny_fragments_do_not_run(self, detector_standard):
+        # Three 2-char fragments sum to 6 (> old threshold of 5) but none is
+        # individually substantial, so the per-span gate skips review.
+        text = "ab cd ef"
+        uncovered = [(0, 2), (3, 5), (6, 8)]
+        assert not detector_standard._should_run_llm_review(
+            text, [(0, len(text))], uncovered, []
+        )
+
+    def test_skips_when_layer2_high_confidence_and_well_covered(self, detector_standard):
+        # 30-char suspicious region; 4 alnum chars uncovered, Layer 2 covers the
+        # rest (87%) at high confidence -> skip. The content gate passes first, so
+        # this isolates the confidence gate (lower min_chars so 4 alnum clears it).
+        text = "a" * 26 + "abcd"  # len 30; text[26:30] = "abcd"
+        suspicious = [(0, 30)]
+        uncovered = [(26, 30)]  # coverage = 26/30 = 0.87
+        covering = [self._match(0, 26, 0.97)]
+        detector_standard.config.llm_min_uncovered_chars = 3
+        try:
+            assert not detector_standard._should_run_llm_review(
+                text, suspicious, uncovered, covering
+            )
+        finally:
+            detector_standard.config.llm_min_uncovered_chars = 5
+
+    def test_runs_when_layer2_low_confidence(self, detector_standard):
+        # Same high coverage (80%), but Layer 2 is unsure -> let the LLM look.
+        text = "Smithx" + "y" * 24  # len 30; text[0:6] = "Smithx" (6 alnum)
+        suspicious = [(0, 30)]
+        uncovered = [(0, 6)]  # coverage = 24/30 = 0.80
+        low_conf = [self._match(6, 30, 0.4)]
+        assert detector_standard._should_run_llm_review(
+            text, suspicious, uncovered, low_conf
+        )
 
 
 class TestPhoneDetection:

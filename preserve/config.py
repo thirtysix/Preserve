@@ -61,6 +61,30 @@ class PreserveConfig(BaseModel):
         default=True,
         description="Use chat completion mode (recommended for Qwen3.5 instruction-tuned models)",
     )
+    llm_min_uncovered_chars: int = Field(
+        default=5,
+        description=(
+            "Layer 3 gate: minimum number of *alphanumeric* characters in a single "
+            "uncovered suspicious span before it's worth sending to LLM review. "
+            "Counting alphanumerics (not raw length) avoids firing on stray whitespace "
+            "or punctuation; the per-span check avoids firing on scattered fragments."
+        ),
+    )
+    llm_skip_coverage: float = Field(
+        default=0.8,
+        description=(
+            "Layer 3 gate: if Layer 2 already covers at least this fraction of the "
+            "suspicious region (and llm_skip_confidence is also met), skip LLM review."
+        ),
+    )
+    llm_skip_confidence: float = Field(
+        default=0.85,
+        description=(
+            "Layer 3 gate: if Layer 2 matches overlapping the suspicious region have a "
+            "mean confidence at or above this (and llm_skip_coverage is also met), skip "
+            "LLM review — the region is already handled and the LLM rarely adds anything."
+        ),
+    )
     llm_include_examples: bool = Field(
         default=True,
         description="Include few-shot examples in LLM prompt (disable for larger models to save tokens)",
