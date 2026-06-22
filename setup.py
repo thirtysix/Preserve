@@ -19,7 +19,9 @@ setup(
     extras_require={
         "ner": ["spacy>=3.0"],
         "llm": ["llama-cpp-python>=0.2.0"],
-        "all": ["spacy>=3.0", "llama-cpp-python>=0.2.0"],
-        "dev": ["pytest>=7.0", "pytest-mock>=3.0", "huggingface-hub"],
+        "api": ["fastapi>=0.110", "uvicorn>=0.27"],
+        "redis": ["redis>=5.0"],
+        "all": ["spacy>=3.0", "llama-cpp-python>=0.2.0", "fastapi>=0.110", "uvicorn>=0.27", "redis>=5.0"],
+        "dev": ["pytest>=7.0", "pytest-mock>=3.0", "huggingface-hub", "httpx"],
     },
 )

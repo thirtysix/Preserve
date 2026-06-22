@@ -1,0 +1,28 @@
+# Preserve API gateway + Redis (shared rate limiting).
+#
+#   1. cp .env.example .env   and set PRESERVE_UPSTREAM_API_KEY + PRESERVE_API_KEYS
+#   2. docker compose up --build
+#
+# The api listens on 127.0.0.1:8800 — put a TLS reverse proxy in front for
+# public traffic (see docs/DEPLOY.md). Never expose the upstream key to clients.
+
+services:
+  api:
+    build: .
+    restart: unless-stopped
+    environment:
+      PRESERVE_UPSTREAM_API_KEY: ${PRESERVE_UPSTREAM_API_KEY:-}
+      PRESERVE_UPSTREAM_BASE_URL: ${PRESERVE_UPSTREAM_BASE_URL:-https://api.deepinfra.com/v1/openai}
+      PRESERVE_DEFAULT_MODEL: ${PRESERVE_DEFAULT_MODEL:-meta-llama/Llama-3.3-70B-Instruct}
+      PRESERVE_API_KEYS: ${PRESERVE_API_KEYS:-}
+      PRESERVE_SENSITIVITY: ${PRESERVE_SENSITIVITY:-standard}
+      REDIS_URL: redis://redis:6379/0
+    ports:
+      - "127.0.0.1:8800:8800"   # bind to localhost; reverse proxy terminates TLS
+    depends_on:
+      - redis
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--save", "", "--appendonly", "no"]  # ephemeral counters

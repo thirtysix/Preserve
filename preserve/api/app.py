@@ -27,7 +27,7 @@ from preserve.api.models import (
     ChatCompletionRequest, DetectRequest, DetectResponse, Detection,
     RestoreRequest, RestoreResponse, ScrubRequest, ScrubResponse,
 )
-from preserve.api.ratelimit import RateLimiter, RateLimitExceeded
+from preserve.api.ratelimit import RateLimitExceeded, get_rate_limiter
 from preserve.api.settings import APIKey, APISettings, get_settings
 from preserve.config import PreserveConfig, SensitivityLevel
 from preserve.mapping import PlaceholderMap
@@ -44,7 +44,7 @@ def create_app(settings: Optional[APISettings] = None) -> FastAPI:
         description="Privacy-preserving LLM proxy: scrubs PII before it reaches the upstream model.",
     )
     app.state.settings = settings
-    app.state.limiter = RateLimiter()
+    app.state.limiter = get_rate_limiter()
     app.state._scrubbers: dict[str, Scrubber] = {}
     app.state._scrubber_lock = threading.Lock()
     app.state._upstream = None

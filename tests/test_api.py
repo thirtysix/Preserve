@@ -139,3 +139,13 @@ def test_input_too_large():
     big = "x" * (settings.max_input_chars + 1)
     r = client.post("/v1/scrub", json={"text": big}, headers=AUTH)
     assert r.status_code == 413
+
+
+def test_rate_limiter_factory_falls_back_to_memory(monkeypatch):
+    # No REDIS_URL -> in-memory limiter
+    from preserve.api.ratelimit import RateLimiter, get_rate_limiter
+    monkeypatch.delenv("REDIS_URL", raising=False)
+    assert isinstance(get_rate_limiter(), RateLimiter)
+    # Unreachable REDIS_URL -> still falls back (no crash)
+    monkeypatch.setenv("REDIS_URL", "redis://127.0.0.1:6390/0")
+    assert isinstance(get_rate_limiter(), RateLimiter)

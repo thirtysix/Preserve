@@ -7,6 +7,10 @@ Privacy-preserving PII detection and scrubbing for LLM inference queries. Preser
 - **International** — 49+ regex patterns and 9 checksum validators across 15+ countries.
 - **Layered** — fast deterministic detection, with an optional local LLM for the hard cases.
 
+[![CI](https://github.com/thirtysix/Preserve/actions/workflows/ci.yml/badge.svg)](https://github.com/thirtysix/Preserve/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Live demo](https://img.shields.io/badge/demo-live-brightgreen)](https://thirtysix.github.io/Preserve/)
+
 ## Live Demo
 
 A browser-based demo of the **deterministic** detection layer (regex + checksum validation) runs entirely client-side — no data leaves your browser:
@@ -187,9 +191,16 @@ print(resp.choices[0].message.content)   # PII restored; the upstream model only
 | `GET /health` | Liveness. |
 
 Built in: per-key API-key auth (`Authorization: Bearer …`), per-key requests/min + daily token
-quotas, input-size caps, and PII-free audit logging (`logs/api_audit.jsonl`). The rate-limit
-store is in-memory — for multi-worker/multi-host deployments back it with Redis and terminate
-TLS at a reverse proxy.
+quotas, input-size caps, and PII-free audit logging (`logs/api_audit.jsonl`). Rate limiting is
+in-memory by default and uses **Redis** automatically when `REDIS_URL` is set (multi-worker/host).
+
+**Production deploy** (Docker Compose + Redis, TLS, systemd, shared-host) — see
+[`docs/DEPLOY.md`](docs/DEPLOY.md):
+
+```bash
+cp .env.example .env   # set PRESERVE_UPSTREAM_API_KEY + PRESERVE_API_KEYS
+docker compose up --build -d   # API on 127.0.0.1:8800 + Redis; put TLS proxy in front
+```
 
 ## International PII Coverage (49+ patterns)
 
@@ -362,6 +373,7 @@ docs/                  # Research + static browser demo
   assets/              # Demo JS/CSS + exported patterns
   PRIVACY_TAXONOMY.md  # Threat model and framework
   LLM_BENCHMARK.md     # Layer 3 model comparison (incl. GPU benchmarks)
+  DEPLOY.md            # API gateway production deployment (Docker, TLS, Redis)
 
 scripts/               # Utilities (server, model download, benchmarks, pattern export)
 poc/                   # Proof-of-concept demos
