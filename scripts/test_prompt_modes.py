@@ -50,9 +50,9 @@ TEST_CASES = [
         "expected": [("NAME", "Sofía García"), ("ADDRESS", "Calle Reforma 156"), ("FINANCIAL", "MXN 85,000")],
     },
     {
-        "text": "João Silva, email joao@empresa.com.br, CPF 123.456.789-09.",
+        "text": "João Silva, email joao@example.com, CPF 123.456.789-09.",
         "spans": [(0, 10), (18, 36), (42, 56)],
-        "expected": [("NAME", "João Silva"), ("EMAIL", "joao@empresa.com.br"), ("ID_NUMBER", "123.456.789-09")],
+        "expected": [("NAME", "João Silva"), ("EMAIL", "joao@example.com"), ("ID_NUMBER", "123.456.789-09")],
     },
     {
         "text": "The treatment follows standard guidelines for acute myocardial infarction.",

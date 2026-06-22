@@ -57,10 +57,16 @@ def main():
     print(f"Loaded {len(rows)} rows, {len(rows[0])} columns")
     print()
 
-    # Test at each sensitivity level
+    # --- Test 1: ISOLATED VALUES (worst case: each value scrubbed with NO context) ---
+    # Context-dependent patterns (passport, address, names) deliberately require a
+    # nearby keyword, so they score low here. This is a lower bound, not the headline
+    # number — see the IN-CONTEXT test below for realistic prompt-style detection.
+    print("ISOLATED-VALUE TEST — each field scrubbed alone, no surrounding context.")
+    print("(Lower bound: contextual patterns can't fire without their keywords.)")
+    print()
     for level in [SensitivityLevel.MINIMAL, SensitivityLevel.STANDARD, SensitivityLevel.AGGRESSIVE]:
         print(f"{'=' * 70}")
-        print(f"  SENSITIVITY: {level.value.upper()}")
+        print(f"  SENSITIVITY: {level.value.upper()} (isolated values)")
         print(f"{'=' * 70}")
 
         config = PreserveConfig(sensitivity_level=level)
@@ -110,39 +116,59 @@ def main():
         print(f"  OVERALL: {total_detected}/{total_items} ({overall_rate:.1f}%)")
         print()
 
-    # Also test full-row scrubbing (simulating a natural language prompt)
+    # --- Test 2: IN-CONTEXT RECALL (realistic: all PII fields in a natural prompt) ---
+    # This is the headline measurement reported in the README. Each row becomes a
+    # natural-language narrative containing all 12 PII fields; a field counts as
+    # detected if any detection span overlaps its position (the same overlap rule
+    # used elsewhere). Run over ALL rows, not a sample.
     print(f"{'=' * 70}")
-    print(f"  FULL-ROW NARRATIVE TEST (AGGRESSIVE)")
+    print(f"  IN-CONTEXT RECALL (AGGRESSIVE) — all fields in a natural prompt")
     print(f"{'=' * 70}")
     print()
 
-    config = PreserveConfig(
-        sensitivity_level=SensitivityLevel.AGGRESSIVE,
-        use_normalcy_scanner=True,
-    )
-    scrubber = Scrubber(config)
+    scrubber = Scrubber(PreserveConfig(sensitivity_level=SensitivityLevel.AGGRESSIVE))
+    ctx_stats = {col: {"total": 0, "detected": 0} for col in PII_COLUMNS}
+    round_trips_ok = 0
 
-    sample_rows = [rows[0], rows[1], rows[10], rows[25], rows[50], rows[75], rows[99]]
-
-    for row in sample_rows:
+    for row in rows:
         narrative = (
-            f"Patient {row['full_name']}, born {row['date_of_birth']}, "
-            f"residing at {row['address']}, {row['region']}, {row['country']}. "
-            f"Contact: {row['email']}, phone {row['phone']}. "
-            f"National ID: {row['national_id']}. "
-            f"Primary diagnosis: {row['diagnosis_primary']}. "
-            f"Medication: {row['current_medication']}. "
+            f"Patient: {row['full_name']}, born {row['date_of_birth']}, residing at "
+            f"{row['address']}, {row['region']}, {row['country']}. Email {row['email']}, "
+            f"phone {row['phone']}. National ID: {row['national_id']}. "
+            f"Passport: {row['passport_number']}. Bank IBAN {row['bank_account']}. "
+            f"Card {row['credit_card']}. IP {row['ip_address']}. "
             f"Emergency contact: {row['emergency_contact_name']} ({row['emergency_contact_phone']})."
         )
-
         result = scrubber.scrub(narrative)
-        types_found = list(result.pii_summary.keys())
+        spans = [(d.start, d.end) for d in result.detections]
+        if scrubber.restore(result.sanitized_text, result.placeholder_map) == narrative:
+            round_trips_ok += 1
 
-        print(f"  Row {row['id']} ({row['country']}):")
-        print(f"    PII found: {result.pii_count} items — {', '.join(types_found)}")
-        print(f"    Sanitized: {result.sanitized_text[:120]}...")
-        print(f"    Round-trip: {scrubber.restore(result.sanitized_text, result.placeholder_map) == narrative}")
-        print()
+        for col in PII_COLUMNS:
+            value = row.get(col, "")
+            if not value or value == "None":
+                continue
+            ctx_stats[col]["total"] += 1
+            idx = narrative.find(value)
+            if idx < 0:
+                continue
+            a, b = idx, idx + len(value)
+            if any(s < b and e > a for s, e in spans):
+                ctx_stats[col]["detected"] += 1
+
+    print(f"  {'Column':<28s} {'Detected':>10s} {'Total':>8s} {'Rate':>8s}")
+    print(f"  {'-'*28} {'-'*10} {'-'*8} {'-'*8}")
+    td = tt = 0
+    for col in PII_COLUMNS:
+        d, t = ctx_stats[col]["detected"], ctx_stats[col]["total"]
+        td += d
+        tt += t
+        rate = d / t * 100 if t else 0
+        indicator = "  " if rate >= 90 else "! " if rate >= 50 else "!!"
+        print(f"{indicator}{col:<28s} {d:>10d} {t:>8d} {rate:>7.1f}%")
+    print()
+    print(f"  OVERALL (in context): {td}/{tt} ({td/tt*100:.1f}%)")
+    print(f"  Reversible round-trip: {round_trips_ok}/{len(rows)} rows exact")
 
 
 if __name__ == "__main__":

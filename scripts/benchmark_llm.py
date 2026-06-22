@@ -144,7 +144,7 @@ TEST_CASES = [
         "id": "dataset_row_narrative",
         "text": (
             "Leonardo Ferrari, born 06/22/1988, lives at Corso Italia 47, Lombardy, Italy. "
-            "Email: leonardo_ferrari@libero.it, phone +39 345 678 9012. "
+            "Email: leonardo_ferrari@example.com, phone +39 345 678 9012. "
             "National ID: FRRLRD88H22F205X. Diagnosed with Type 2 diabetes mellitus. "
             "Blood type A+. BRCA2 positive."
         ),
@@ -152,7 +152,7 @@ TEST_CASES = [
             ("NAME", "Leonardo Ferrari"),
             ("DOB", "06/22/1988"),
             ("ADDRESS", "Corso Italia 47"),
-            ("EMAIL", "leonardo_ferrari@libero.it"),
+            ("EMAIL", "leonardo_ferrari@example.com"),
             ("PHONE", "+39 345 678 9012"),
             ("ID_NUMBER", "FRRLRD88H22F205X"),
         ],

@@ -139,23 +139,13 @@ MENTAL_HEALTH = ["No conditions", "Depression (treated)", "Anxiety (treated)",
 
 
 def gen_email(first: str, last: str, country: str) -> str:
-    domains = {
-        "US": ["gmail.com", "yahoo.com", "outlook.com"],
-        "UK": ["gmail.co.uk", "btinternet.com", "outlook.co.uk"],
-        "Finland": ["gmail.com", "outlook.fi", "elisanet.fi"],
-        "Germany": ["gmail.de", "web.de", "t-online.de"],
-        "France": ["gmail.fr", "orange.fr", "free.fr"],
-        "Brazil": ["gmail.com.br", "uol.com.br", "hotmail.com"],
-        "India": ["gmail.com", "rediffmail.com", "yahoo.co.in"],
-        "Japan": ["gmail.com", "yahoo.co.jp", "docomo.ne.jp"],
-        "Mexico": ["gmail.com", "hotmail.com", "prodigy.net.mx"],
-        "Spain": ["gmail.es", "hotmail.es", "telefonica.net"],
-        "Italy": ["gmail.it", "libero.it", "virgilio.it"],
-        "Netherlands": ["gmail.nl", "xs4all.nl", "ziggo.nl"],
-        "South Korea": ["gmail.com", "naver.com", "daum.net"],
-        "Australia": ["gmail.com.au", "bigpond.com", "optusnet.com.au"],
-        "Canada": ["gmail.ca", "rogers.com", "shaw.ca"],
-    }
+    # RFC 2606 reserved domains only — synthetic test data must never resolve
+    # to a real mailbox. Multiple TLDs preserve country/domain-shape variety.
+    pool = ["example.com", "example.org", "example.net"]
+    domains = {c: pool for c in [
+        "US", "UK", "Finland", "Germany", "France", "Brazil", "India", "Japan",
+        "Mexico", "Spain", "Italy", "Netherlands", "South Korea", "Australia", "Canada",
+    ]}
     sep = random.choice([".", "_", ""])
     f = first.lower().replace("é", "e").replace("ö", "o").replace("ä", "a").replace("ü", "u").replace("-", "")
     l = last.lower().replace("é", "e").replace("ö", "o").replace("ä", "a").replace("ü", "u").replace(" ", "").replace("-", "")

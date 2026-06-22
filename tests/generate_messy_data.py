@@ -31,8 +31,8 @@ MESSY_CASES = [
     },
     {
         "id": "no_caps_2",
-        "text": "mikko virtanen called about his prescription, phone 040 1234567, email mikko.virtanen@gmail.com",
-        "expected_pii": ["mikko virtanen", "040 1234567", "mikko.virtanen@gmail.com"],
+        "text": "mikko virtanen called about his prescription, phone 040 1234567, email mikko.virtanen@example.com",
+        "expected_pii": ["mikko virtanen", "040 1234567", "mikko.virtanen@example.com"],
         "tags": ["no_caps", "finnish"],
     },
 
@@ -65,8 +65,8 @@ MESSY_CASES = [
     },
     {
         "id": "typos_2",
-        "text": "contcat info for miko virtanen: emal mikko@compnay.fi, tel 040-123-4567",
-        "expected_pii": ["miko virtanen", "mikko@compnay.fi", "040-123-4567"],
+        "text": "contcat info for miko virtanen: emal mikko@example.com, tel 040-123-4567",
+        "expected_pii": ["miko virtanen", "mikko@example.com", "040-123-4567"],
         "tags": ["typos", "finnish"],
     },
 
@@ -87,14 +87,14 @@ MESSY_CASES = [
     # --- Informal / conversational ---
     {
         "id": "informal_1",
-        "text": "hey can u look up john smith? his email is jsmith99@gmail.com and i think his ssn is 234-56-7890 but dont quote me on that",
-        "expected_pii": ["john smith", "jsmith99@gmail.com", "234-56-7890"],
+        "text": "hey can u look up john smith? his email is jsmith99@example.com and i think his ssn is 234-56-7890 but dont quote me on that",
+        "expected_pii": ["john smith", "jsmith99@example.com", "234-56-7890"],
         "tags": ["informal", "conversational"],
     },
     {
         "id": "informal_2",
-        "text": "yo check this - aurora.rossi@hospital.org wants a refund, card ending 4567, she lives somewhere on via roma i think #31",
-        "expected_pii": ["aurora.rossi@hospital.org", "4567", "via roma"],
+        "text": "yo check this - aurora.rossi@example.com wants a refund, card ending 4567, she lives somewhere on via roma i think #31",
+        "expected_pii": ["aurora.rossi@example.com", "4567", "via roma"],
         "tags": ["informal", "partial_info"],
     },
 
@@ -107,8 +107,8 @@ MESSY_CASES = [
     },
     {
         "id": "copypaste_2",
-        "text": "From: mikko.virtanen@company.fi\nTo: hr@company.fi\nSubject: Leave Request\n\nHi, my employee ID is EMP-4521 and I need to update my address to Fredrikinkatu 22, 00100 Helsinki. My henkilötunnus is 010285A123N for the records.",
-        "expected_pii": ["mikko.virtanen@company.fi", "Fredrikinkatu 22", "010285A123N"],
+        "text": "From: mikko.virtanen@example.com\nTo: hr@example.com\nSubject: Leave Request\n\nHi, my employee ID is EMP-4521 and I need to update my address to Fredrikinkatu 22, 00100 Helsinki. My henkilötunnus is 010285A123N for the records.",
+        "expected_pii": ["mikko.virtanen@example.com", "Fredrikinkatu 22", "010285A123N"],
         "tags": ["copypaste", "email_format", "finnish"],
     },
 
@@ -157,8 +157,8 @@ MESSY_CASES = [
     # --- List / structured but messy ---
     {
         "id": "list_1",
-        "text": "Attendees:\n- Kim, Min-jun (Korea) - mkim@samsung.co.kr\n- Tanaka, Haruto (Japan) - h.tanaka@sony.co.jp\n- Virtanen, Mikko (Finland) - mvirtanen@nokia.fi",
-        "expected_pii": ["Min-jun", "Kim", "mkim@samsung.co.kr", "Haruto", "Tanaka", "h.tanaka@sony.co.jp", "Mikko", "Virtanen", "mvirtanen@nokia.fi"],
+        "text": "Attendees:\n- Kim, Min-jun (Korea) - mkim@example.com\n- Tanaka, Haruto (Japan) - h.tanaka@example.com\n- Virtanen, Mikko (Finland) - mvirtanen@example.com",
+        "expected_pii": ["Min-jun", "Kim", "mkim@example.com", "Haruto", "Tanaka", "h.tanaka@example.com", "Mikko", "Virtanen", "mvirtanen@example.com"],
         "tags": ["list", "structured", "multinational"],
     },
 

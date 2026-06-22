@@ -47,21 +47,30 @@ The browser demo implements **Layers 2a + 2c + 2d** (regex, checksums, context s
 
 ### Detection rates
 
+Measured **in context** (PII embedded in natural-language prompts, the realistic case),
+Layer 2 only. Reproduce with `python tests/test_against_dataset.py`.
+
 | Dataset | Layer 2 only | Layer 2 + LLM |
 | --- | --- | --- |
 | Clean data (100 rows, 1200 PII items) | **99.8%** | — |
 | Messy data (23 cases, 82 PII items) | **87.8%** | ~87% on hardest subset |
 
-### Per-column detection (clean data, Layer 2)
+All 100 clean rows also round-trip exactly (scrub → restore reproduces the original).
+
+### Per-column detection (clean data, in context, Layer 2)
 
 | Column | Rate | Column | Rate |
 | --- | --- | --- | --- |
-| full_name | 99% | credit_card | 100% |
+| full_name | 100% | credit_card | 100% |
 | date_of_birth | 100% | ip_address | 100% |
-| email | 100% | address | 99% |
-| phone | 100% | emergency_contact_name | 98% |
+| email | 100% | address | 98% |
+| phone | 100% | emergency_contact_name | 100% |
 | national_id | 100% | emergency_contact_phone | 100% |
 | passport_number | 100% | bank_account | 100% |
+
+> Detection rates are highest in context. Several patterns (passport, address, names)
+> intentionally require a nearby keyword, so a bare value scrubbed *with no surrounding
+> text* scores lower — the test script reports that isolated-value lower bound too.
 
 ### Layer 3 inference speed
 
@@ -323,7 +332,7 @@ python -m preserve scrub-csv data.csv -o scrubbed.csv
 ```bash
 source .venv/bin/activate
 python -m pytest tests/ -v              # 87 unit tests (detection, false positives, Layer 3 gate, API gateway)
-python tests/test_against_dataset.py    # Per-column detection rates
+python tests/test_against_dataset.py    # Per-column rates: isolated lower-bound + in-context (99.8%)
 ```
 
 ## Project Structure
