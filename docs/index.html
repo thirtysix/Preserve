@@ -28,11 +28,13 @@
     </div>
 
     <div class="notice">
-      This demo implements the <strong>deterministic</strong> detection layers only:
-      <strong>52 regex patterns</strong> (Layer&nbsp;2a) across 15+ countries and
-      <strong>9 checksum validators</strong> (Layer&nbsp;2c: Luhn, IBAN, CPF, DNI/NIE, BSN, NHS, HETU, RRN).
-      The full tool adds a gazetteer-based name scorer and an optional local LLM (Layer&nbsp;3)
-      that catch contextual PII like bare lowercase names — those require the Python package.
+      This demo implements the <strong>deterministic</strong> detection layers:
+      <strong>53 regex patterns</strong> (Layer&nbsp;2a) across 15+ countries,
+      <strong>9 checksum validators</strong> (Layer&nbsp;2c: Luhn, IBAN, CPF, DNI/NIE, BSN, NHS, HETU, RRN),
+      and context scoring (Layer&nbsp;2d). Names are caught when they carry a title or label
+      (e.g. &ldquo;Dr. Lee&rdquo;, &ldquo;Patient: Aurora Rossi&rdquo;); <strong>bare names</strong>
+      in free text need the gazetteer name scorer or local LLM review (Layers&nbsp;2h/3),
+      which require the Python package.
     </div>
 
     <div class="controls">

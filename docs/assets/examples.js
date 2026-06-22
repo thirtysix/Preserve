@@ -3,7 +3,7 @@
 // layer, plus one checksum-focused case with known-valid values.
 window.PRESERVE_EXAMPLES = {
   "Patient record": (
-    "Patient Aurora Rossi, born 04/05/1971, email aurora.rossi@hospital.org, " +
+    "Patient: Aurora Rossi, born 04/05/1971, email aurora.rossi@hospital.org, " +
     "phone (555) 123-4567, SSN 123-45-6789, card 4242 4242 4242 4242. " +
     "Emergency contact: Sofia Esposito."
   ),

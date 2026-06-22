@@ -64,22 +64,59 @@ def export_context() -> None:
     print(f"Wrote context scoring -> {OUT_CTX}")
 
 
-# Scoped inline flags like "(?i:...)" are valid in Python but not in JS regex,
-# and can't be globalized without changing semantics (e.g. case-sensitive name
-# extraction). Such patterns are skipped from the browser demo.
-SCOPED_INLINE_FLAG = re.compile(r"\(\?[a-zA-Z]+:")
+# JS regex has no scoped inline flags like "(?i:...)". We rewrite such a group
+# into a case-insensitive form by "case-classing" its letters (patient ->
+# [pP][aA][tT][iI][eE][nN][tT]), leaving any case-sensitive capture group that
+# follows (e.g. the [A-Z][a-z]+ name shape) untouched.
+def _case_class(text: str) -> str:
+    out = []
+    for ch in text:
+        if ch.isascii() and ch.isalpha():
+            out.append(f"[{ch.lower()}{ch.upper()}]")
+        else:
+            out.append(ch)
+    return "".join(out)
+
+
+def rewrite_inline_flags(source: str) -> str:
+    out, i, n = [], 0, len(source)
+    while i < n:
+        if source.startswith("(?i:", i):
+            depth, j, in_class = 1, i + 4, False
+            inner_start = j
+            while j < n:
+                c = source[j]
+                if c == "\\":
+                    j += 2
+                    continue
+                if in_class:
+                    if c == "]":
+                        in_class = False
+                elif c == "[":
+                    in_class = True
+                elif c == "(":
+                    depth += 1
+                elif c == ")":
+                    depth -= 1
+                    if depth == 0:
+                        break
+                j += 1
+            # Wrap in a non-capturing group to preserve the original grouping
+            # (otherwise a top-level "a|b" alternation would no longer be bounded).
+            out.append("(?:" + _case_class(source[inner_start:j]) + ")")
+            i = j + 1  # skip the matching ')'
+        else:
+            out.append(source[i])
+            i += 1
+    return "".join(out)
 
 
 def export() -> None:
     rows = []
-    skipped = []
     for p in ALL_PATTERNS:
-        if SCOPED_INLINE_FLAG.search(p.regex.pattern):
-            skipped.append(p.name)
-            continue
         rows.append({
             "name": p.name,
-            "source": p.regex.pattern,
+            "source": rewrite_inline_flags(p.regex.pattern),
             "flags": _flags(p.regex),
             "group": 1 if p.regex.groups >= 1 else 0,  # extract group 1 if present
             "sensitivity": p.min_sensitivity.value,
@@ -102,8 +139,6 @@ def export() -> None:
         f.write(";\n")
 
     print(f"Wrote {len(rows)} patterns -> {OUT}")
-    if skipped:
-        print(f"Skipped {len(skipped)} pattern(s) with JS-incompatible scoped inline flags: {', '.join(skipped)}")
     validated = sorted(p["name"] for p in rows if p["has_validator"])
     print(f"Patterns with checksum validators ({len(validated)}): {', '.join(validated)}")
 

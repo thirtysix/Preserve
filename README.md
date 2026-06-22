@@ -41,7 +41,7 @@ Layer 3: LOCAL LLM REVIEW (optional)
 Output: sanitized text + reversible placeholder map
 ```
 
-The browser demo implements **Layer 2a + 2c** (regex and checksums). Layers 2b/2g/2h and Layer 3 require the Python package.
+The browser demo implements **Layers 2a + 2c + 2d** (regex, checksums, context scoring), so it also catches names that carry a title or label ("Dr. Lee", "Patient: Aurora Rossi"). Layers 2b/2g/2h and Layer 3 require the Python package.
 
 ## Performance
 
@@ -365,7 +365,7 @@ dashboard.py           # Gradio web dashboard (all layers)
 - **Single common-word names** ("Kim", "Grace" alone) may not be detected without context.
 - **Deliberately redacted data** ("SSN ending in 6789") is partially detected.
 - **Streaming** responses are not yet supported.
-- **Browser demo** covers the deterministic regex + checksum layers only; names and contextual PII need the Python package.
+- **Browser demo** covers the deterministic layers (regex, checksums, context scoring) and catches names with a title/label; bare names in free text need the Python package's name scorer or local LLM.
 
 ## License
 
