@@ -1,0 +1,12 @@
+{
+  "sk-team-alpha": {
+    "name": "alpha-project",
+    "rpm": 60,
+    "daily_token_quota": 2000000
+  },
+  "sk-team-beta": {
+    "name": "beta-project",
+    "rpm": 30,
+    "daily_token_quota": 500000
+  }
+}

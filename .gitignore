@@ -8,3 +8,5 @@ models/*.gguf
 models/.cache/
 vendor/
 .DS_Store
+logs/
+api_keys.json

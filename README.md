@@ -137,6 +137,51 @@ print(scrubber.restore(model_response, result.placeholder_map))
 The mapping also serializes (`placeholder_map.to_dict()` / `PlaceholderMap.from_dict(...)`),
 so the scrub and restore steps can happen in different processes — useful for the API setup below.
 
+## API Gateway (central deployment)
+
+For teams where many (possibly non-technical) people make LLM calls, run Preserve as a
+**central gateway**: an OpenAI-compatible proxy that scrubs PII before forwarding to the
+upstream model and restores it in the response. Users point their existing OpenAI SDK at the
+gateway — no other code changes.
+
+> **Trust model:** in this mode PII leaves the user's machine but stays **inside your
+> organization** — it never reaches the third-party LLM provider (OpenAI/Anthropic/DeepInfra).
+> The placeholder map lives only for the duration of a request and is never persisted; audit
+> logs record detection *counts*, never values. (If you need PII to never leave the device at
+> all, scrub client-side with the library instead.)
+
+```bash
+# Configure and run (see preserve/api/settings.py for all options)
+export PRESERVE_UPSTREAM_API_KEY=...   # org's upstream key (users never see it)
+export PRESERVE_API_KEYS='{"sk-team-alpha":{"name":"alpha","rpm":60,"daily_token_quota":2000000}}'
+./scripts/run_api.sh                   # serves on http://127.0.0.1:8800 (Swagger UI at /docs)
+```
+
+```python
+# Any OpenAI client works — just change base_url and use a gateway key:
+from openai import OpenAI
+client = OpenAI(base_url="http://your-server:8800/v1", api_key="sk-team-alpha")
+
+resp = client.chat.completions.create(
+    model="meta-llama/Llama-3.3-70B-Instruct",
+    messages=[{"role": "user", "content": "Email a summary to jane@acme.com about patient John Smith."}],
+)
+print(resp.choices[0].message.content)   # PII restored; the upstream model only ever saw placeholders
+```
+
+| Endpoint | Purpose |
+| --- | --- |
+| `POST /v1/chat/completions` | OpenAI-compatible proxy: scrub → upstream LLM → restore. Map never stored. |
+| `POST /v1/scrub` | Scrub only → returns sanitized text + a reversible placeholder map (client holds it). |
+| `POST /v1/restore` | Re-insert PII given text + that map. |
+| `POST /v1/detect` | Detection only (types/spans/confidence); `include_values: false` omits raw PII. |
+| `GET /health` | Liveness. |
+
+Built in: per-key API-key auth (`Authorization: Bearer …`), per-key requests/min + daily token
+quotas, input-size caps, and PII-free audit logging (`logs/api_audit.jsonl`). The rate-limit
+store is in-memory — for multi-worker/multi-host deployments back it with Redis and terminate
+TLS at a reverse proxy.
+
 ## International PII Coverage (49+ patterns)
 
 | Region | Identifiers |
@@ -277,7 +322,7 @@ python -m preserve scrub-csv data.csv -o scrubbed.csv
 
 ```bash
 source .venv/bin/activate
-python -m pytest tests/ -v              # 79 unit tests (incl. false-positive + Layer 3 gate)
+python -m pytest tests/ -v              # 87 unit tests (detection, false positives, Layer 3 gate, API gateway)
 python tests/test_against_dataset.py    # Per-column detection rates
 ```
 
@@ -300,6 +345,7 @@ preserve/              # Core library
   mapping.py           # Reversible placeholder mapping
   scrubber.py          # Scrub/restore pipeline
   client.py            # OpenAI-compatible API wrapper
+  api/                 # FastAPI gateway (proxy, scrub/restore/detect, auth, quotas)
   __main__.py          # CLI interface (python -m preserve)
 
 docs/                  # Research + static browser demo
@@ -310,7 +356,7 @@ docs/                  # Research + static browser demo
 
 scripts/               # Utilities (server, model download, benchmarks, pattern export)
 poc/                   # Proof-of-concept demos
-tests/                 # 79 unit tests + benchmarks
+tests/                 # 87 unit tests + benchmarks
 dashboard.py           # Gradio web dashboard (all layers)
 ```
 

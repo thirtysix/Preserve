@@ -6,6 +6,8 @@ email-validator>=2.0.0
 dateparser>=1.0.0
 names-dataset>=3.0.0
 wordfreq>=3.0.0
+fastapi>=0.110          # API gateway (preserve.api)
+uvicorn>=0.27           # ASGI server for the gateway
 
 # Optional: for enhanced name/entity detection
 # spacy>=3.0
