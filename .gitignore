@@ -10,3 +10,4 @@ vendor/
 .DS_Store
 logs/
 api_keys.json
+nextsession.md
