@@ -41,7 +41,7 @@ llm = ["llama-cpp-python>=0.2.0"]
 api = ["fastapi>=0.110", "uvicorn>=0.27"]
 redis = ["redis>=5.0"]
 all = ["spacy>=3.0", "llama-cpp-python>=0.2.0", "fastapi>=0.110", "uvicorn>=0.27", "redis>=5.0"]
-dev = ["pytest>=7.0", "pytest-mock>=3.0", "huggingface-hub", "httpx", "build", "twine"]
+dev = ["pytest>=7.0", "pytest-mock>=3.0", "huggingface-hub", "httpx", "build", "twine", "datasets>=2.0"]
 
 [project.urls]
 Homepage = "https://github.com/thirtysix/Preserve"

@@ -387,11 +387,130 @@ def write_report(clean, messy, hard, neg, l3) -> None:
         json.dump({"clean": clean, "messy": messy, "hard": hard, "negatives": neg, "layer3": l3}, f, indent=2)
 
 
+# --------------------------------------------------------------------------- #
+# Corpus mode: run a config comparison on a large downloaded dataset
+# --------------------------------------------------------------------------- #
+# Map ai4privacy's taxonomy onto the PII categories Preserve targets. Gold
+# entities whose label is NOT here are "out of scope": excluded from recall and
+# never counted as a false positive (Preserve doesn't claim to detect them).
+AI4PRIVACY_MAP = {
+    "FIRSTNAME": "NAME", "LASTNAME": "NAME", "MIDDLENAME": "NAME",
+    "EMAIL": "EMAIL",
+    "PHONENUMBER": "PHONE",
+    "DOB": "DATE", "DATE": "DATE",
+    "STREET": "ADDRESS", "BUILDINGNUMBER": "ADDRESS",
+    "SECONDARYADDRESS": "ADDRESS", "ZIPCODE": "ADDRESS",
+    "CREDITCARDNUMBER": "CREDIT_CARD",
+    "IBAN": "IBAN",
+    "IPV4": "IP", "IPV6": "IP", "IP": "IP",
+    "SSN": "SSN",
+    "ACCOUNTNUMBER": "ACCOUNT",
+}
+
+
+def load_corpus(n: int, all_langs: bool):
+    from datasets import load_dataset
+    ds = load_dataset("ai4privacy/pii-masking-200k", split="train", streaming=True)
+    samples = []
+    for ex in ds:
+        if not all_langs and ex.get("language") != "en":
+            continue
+        text = ex.get("source_text") or ""
+        pm = ex.get("privacy_mask") or []
+        gold_all = [(m["start"], m["end"]) for m in pm]
+        gold_sup = [(m["start"], m["end"], AI4PRIVACY_MAP[m["label"]])
+                    for m in pm if m.get("label") in AI4PRIVACY_MAP]
+        samples.append((text, gold_sup, gold_all))
+        if len(samples) >= n:
+            break
+    return samples
+
+
+def _run_config(samples, config) -> dict:
+    scrubber = Scrubber(config)
+    per_cat: dict[str, dict] = {}
+    tp = fn = det_total = det_fp = 0
+    for text, gold_sup, gold_all in samples:
+        spans = [(d.start, d.end) for d in scrubber.scrub(text).detections]
+        for (s, e, cat) in gold_sup:
+            pc = per_cat.setdefault(cat, {"total": 0, "found": 0})
+            pc["total"] += 1
+            if _overlaps(s, e, spans):
+                pc["found"] += 1
+                tp += 1
+            else:
+                fn += 1
+        for (s, e) in spans:
+            det_total += 1
+            if not _overlaps(s, e, gold_all):
+                det_fp += 1
+    recall = tp / (tp + fn) if (tp + fn) else 0.0
+    precision = (det_total - det_fp) / det_total if det_total else 0.0
+    return {"recall": recall, "precision": precision, "tp": tp, "fn": fn, "fp": det_fp,
+            "f1": fbeta(precision, recall, 1), "f2": fbeta(precision, recall, 2),
+            "per_cat": {k: {**v, "recall": (v["found"] / v["total"] if v["total"] else 0.0)}
+                        for k, v in sorted(per_cat.items())}}
+
+
+def run_corpus_comparison(n: int, all_langs: bool, with_llm: bool) -> None:
+    SL = SensitivityLevel
+    print(f"\nLoading ai4privacy/pii-masking-200k ({'all langs' if all_langs else 'en'}, n={n})...")
+    samples = load_corpus(n, all_langs)
+    gold = sum(len(g) for _, g, _ in samples)
+    print(f"Loaded {len(samples)} samples, {gold} in-scope gold PII entities.\n")
+
+    configs = [
+        ("minimal", PreserveConfig(sensitivity_level=SL.MINIMAL)),
+        ("standard", PreserveConfig(sensitivity_level=SL.STANDARD)),
+        ("aggressive", PreserveConfig(sensitivity_level=SL.AGGRESSIVE)),
+        ("aggressive, no name-scorer", PreserveConfig(sensitivity_level=SL.AGGRESSIVE, use_name_scorer=False)),
+        ("aggressive + NER (spaCy)", PreserveConfig(sensitivity_level=SL.AGGRESSIVE, use_ner=True)),
+    ]
+    if with_llm:
+        configs.append(("aggressive + LLM", PreserveConfig(
+            sensitivity_level=SL.AGGRESSIVE, use_llm_review=True, llm_backend="embedded")))
+
+    results = []
+    for name, cfg in configs:
+        r = _run_config(samples, cfg)
+        results.append((name, r))
+        print(f"  ran: {name:<28s} recall {pct(r['recall'])}  precision {pct(r['precision'])}")
+
+    print("\n" + "=" * 74)
+    print(f"  CONFIG COMPARISON on ai4privacy ({len(samples)} samples, {gold} entities)")
+    print("=" * 74)
+    print(f"  {'config':<28s} {'recall':>8s} {'precision':>10s} {'F1':>7s} {'F2':>7s}")
+    print(f"  {'-'*28} {'-'*8} {'-'*10} {'-'*7} {'-'*7}")
+    for name, r in results:
+        print(f"  {name:<28s} {pct(r['recall']):>8s} {pct(r['precision']):>10s} {r['f1']:>7.3f} {r['f2']:>7.3f}")
+
+    # Per-category recall for the default 'aggressive' config.
+    agg = dict(results)["aggressive"]
+    print("\n  Per-category recall (aggressive):")
+    for cat, v in agg["per_cat"].items():
+        print(f"    {cat:<12s} {v['found']:>4d}/{v['total']:<4d}  {pct(v['recall'])}")
+    print()
+
+    out = os.path.join(TESTS, "corpus_results.json")
+    with open(out, "w", encoding="utf-8") as f:
+        json.dump({"corpus": "ai4privacy/pii-masking-200k", "lang": "all" if all_langs else "en",
+                   "samples": len(samples), "gold_entities": gold,
+                   "configs": {name: r for name, r in results}}, f, indent=2)
+    print(f"Wrote {out}")
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="Preserve unified evaluation")
-    ap.add_argument("--with-llm", action="store_true", help="re-run the GPU Layer-3 benchmark first")
+    ap.add_argument("--with-llm", action="store_true", help="add the LLM config / re-run the GPU benchmark")
     ap.add_argument("--no-report", action="store_true", help="console only; do not write files")
+    ap.add_argument("--corpus", choices=["ai4privacy"], help="run a config comparison on a large corpus")
+    ap.add_argument("--n", type=int, default=1000, help="number of corpus samples (default 1000)")
+    ap.add_argument("--all-langs", action="store_true", help="corpus: include all languages (default: en only)")
     args = ap.parse_args()
+
+    if args.corpus:
+        run_corpus_comparison(args.n, args.all_langs, args.with_llm)
+        return 0
 
     clean = eval_clean()
     messy = eval_messy()
