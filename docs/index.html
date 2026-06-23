@@ -3,92 +3,133 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Preserve — PII detection demo</title>
-  <meta name="description" content="Browser demo of Preserve's deterministic PII detection (regex + checksum validation). Runs entirely client-side." />
+  <title>Preserve: PII detection demo</title>
+  <meta name="description" content="Browser demo of Preserve's deterministic PII detection (regex + checksum validation + name gazetteer). Runs entirely client-side." />
 
   <!-- Open Graph / Twitter card -->
   <meta property="og:type" content="website" />
-  <meta property="og:title" content="Preserve — PII detection demo" />
-  <meta property="og:description" content="Privacy-preserving PII detection & scrubbing for LLM prompts. This demo runs 100% in your browser." />
+  <meta property="og:title" content="Preserve: PII detection demo" />
+  <meta property="og:description" content="Privacy-preserving PII detection and scrubbing for LLM prompts. This demo runs 100% in your browser." />
   <meta property="og:url" content="https://thirtysix.github.io/Preserve/" />
   <meta property="og:image" content="https://thirtysix.github.io/Preserve/assets/social-preview.png" />
   <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:title" content="Preserve — PII detection demo" />
-  <meta name="twitter:description" content="Privacy-preserving PII detection & scrubbing for LLM prompts. Runs 100% in your browser." />
+  <meta name="twitter:title" content="Preserve: PII detection demo" />
+  <meta name="twitter:description" content="Privacy-preserving PII detection and scrubbing for LLM prompts. Runs 100% in your browser." />
   <meta name="twitter:image" content="https://thirtysix.github.io/Preserve/assets/social-preview.png" />
 
   <link rel="stylesheet" href="assets/style.css" />
 </head>
 <body>
-  <div class="wrap">
-    <header>
-      <h1><span class="tag">Preserve</span> — PII detection demo</h1>
-      <p class="sub">Detects and scrubs personally identifiable information, then maps it to reversible placeholders.</p>
-      <p class="links">
-        <a href="https://github.com/thirtysix/Preserve">GitHub repo</a>
+  <header class="topbar">
+    <div class="brand">
+      <span class="tag">Preserve</span>
+      <span class="brand-sub">PII detection demo</span>
+    </div>
+    <div class="topbar-right">
+      <span class="pill-private"><span class="lock" aria-hidden="true">&#128274;</span> 100% in-browser</span>
+      <nav class="links">
+        <a href="https://github.com/thirtysix/Preserve">GitHub</a>
         <a href="https://github.com/thirtysix/Preserve/blob/main/docs/LLM_BENCHMARK.md">Benchmarks</a>
-      </p>
-    </header>
-
-    <div class="privacy" role="note">
-      <span class="lock" aria-hidden="true">&#128274;</span>
-      <div>
-        <strong>100% private — your text never leaves this browser.</strong>
-        No network requests, no server, no logging. Detection runs entirely in client-side
-        JavaScript on your device. <span class="privacy-sub">(Open your browser's network tab and watch — nothing is sent.)</span>
-      </div>
+      </nav>
     </div>
+  </header>
 
-    <div class="notice">
-      This demo implements the <strong>deterministic</strong> detection layers:
-      <strong>53 regex patterns</strong> (Layer&nbsp;2a) across 15+ countries,
-      <strong>9 checksum validators</strong> (Layer&nbsp;2c: Luhn, IBAN, CPF, DNI/NIE, BSN, NHS, HETU, RRN),
-      and context scoring (Layer&nbsp;2d). Names are caught when they carry a title or label
-      (e.g. &ldquo;Dr. Lee&rdquo;, &ldquo;Patient: Aurora Rossi&rdquo;); <strong>bare names</strong>
-      in free text need the gazetteer name scorer or local LLM review (Layers&nbsp;2h/3),
-      which require the Python package.
-    </div>
+  <main class="app">
+    <!-- LEFT: explanatory boxes (~1/3) -->
+    <aside class="sidebar">
+      <section class="box">
+        <h2>What this does</h2>
+        <p>
+          Detects and scrubs personally identifiable information from text, then maps every
+          redaction to a reversible placeholder like <code>[EMAIL_1]</code>. Type or paste on
+          the right and watch detection happen live.
+        </p>
+      </section>
 
-    <div class="controls">
-      <div class="field">
-        <label for="sensitivity">Sensitivity</label>
-        <select id="sensitivity">
-          <option value="minimal">Minimal — structured PII only</option>
-          <option value="standard" selected>Standard — + phones, IPs, dates</option>
-          <option value="aggressive">Aggressive — + names, addresses</option>
-        </select>
+      <section class="box box-private">
+        <h2><span class="lock" aria-hidden="true">&#128274;</span> Fully private</h2>
+        <p>
+          <strong>Your text never leaves this browser.</strong> No network requests, no server,
+          no logging. Everything runs in client-side JavaScript on your device.
+          <span class="muted">(Open the network tab and watch: nothing is sent.)</span>
+        </p>
+      </section>
+
+      <section class="box">
+        <h2>How detection works</h2>
+        <ul class="layers">
+          <li><span class="lyr">2a</span> <strong>53 regex patterns</strong> across 15+ countries</li>
+          <li><span class="lyr">2c</span> <strong>9 checksum validators</strong> (Luhn, IBAN, CPF, DNI/NIE, BSN, NHS, HETU, RRN)</li>
+          <li><span class="lyr">2d</span> <strong>context scoring</strong> to weight confidence</li>
+          <li><span class="lyr lyr-name">2h</span> <strong>name gazetteer</strong> catching bare names across 55 countries</li>
+        </ul>
+        <p class="muted">
+          The full Python package adds an optional local LLM (Layer 3) for the very hardest
+          cases. Everything else above runs right here.
+        </p>
+        <div class="legend">
+          <span><span class="sw sw-regex"></span> regex / checksum</span>
+          <span><span class="sw sw-name"></span> name scorer</span>
+        </div>
+      </section>
+
+      <section class="box box-stat">
+        <h2>Coverage</h2>
+        <div class="figures">
+          <div><b>53</b><span>regex patterns</span></div>
+          <div><b>9</b><span>checksums</span></div>
+          <div><b>55</b><span>countries (names)</span></div>
+        </div>
+      </section>
+    </aside>
+
+    <!-- RIGHT: working panel (~2/3) -->
+    <section class="work">
+      <div class="controls">
+        <div class="field">
+          <label for="sensitivity">Sensitivity</label>
+          <select id="sensitivity">
+            <option value="minimal">Minimal (structured PII only)</option>
+            <option value="standard" selected>Standard (+ phones, IPs, dates)</option>
+            <option value="aggressive">Aggressive (+ names, addresses)</option>
+          </select>
+        </div>
+        <div class="examples-wrap">
+          <span class="examples-label">Examples</span>
+          <div class="examples" id="examples"></div>
+        </div>
+        <button id="clear">Clear</button>
       </div>
-      <button id="clear">Clear</button>
-    </div>
 
-    <div class="examples" id="examples"></div>
+      <label class="io-label" for="input">Input</label>
+      <textarea id="input" spellcheck="false" placeholder="Type or paste text containing PII..."></textarea>
 
-    <textarea id="input" spellcheck="false" placeholder="Type or paste text containing PII…"></textarea>
-
-    <div class="grid">
-      <div class="card">
-        <h2>Detected (highlighted)</h2>
-        <div class="body" id="highlight"></div>
+      <div class="grid">
+        <div class="card">
+          <h2>Detected (highlighted)</h2>
+          <div class="body" id="highlight"></div>
+        </div>
+        <div class="card">
+          <h2>Scrubbed output</h2>
+          <div class="body" id="scrubbed"></div>
+        </div>
       </div>
-      <div class="card">
-        <h2>Scrubbed output</h2>
-        <div class="body" id="scrubbed"></div>
-      </div>
-    </div>
 
-    <div class="summary" id="summary"></div>
-    <div class="stat" id="stat"></div>
-    <div id="table"></div>
+      <div class="summary" id="summary"></div>
+      <div class="stat" id="stat"></div>
+      <div id="table"></div>
 
-    <footer>
-      Reversible: each placeholder like <code>[EMAIL_1]</code> maps back to the original value locally.
-      Part of <a href="https://github.com/thirtysix/Preserve">Preserve</a> · MIT License.
-      Patterns are exported verbatim from the Python library, so this demo stays in sync with the real detector.
-    </footer>
-  </div>
+      <footer>
+        Reversible: each placeholder like <code>[EMAIL_1]</code> maps back to the original value locally.
+        Part of <a href="https://github.com/thirtysix/Preserve">Preserve</a>, MIT License.
+        Patterns are exported verbatim from the Python library, so this demo stays in sync with the real detector.
+      </footer>
+    </section>
+  </main>
 
   <script src="assets/patterns.js"></script>
   <script src="assets/context.js"></script>
+  <script src="assets/names.js"></script>
   <script src="assets/examples.js"></script>
   <script src="assets/app.js"></script>
 </body>

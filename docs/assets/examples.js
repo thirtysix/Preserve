@@ -17,7 +17,7 @@ window.PRESERVE_EXAMPLES = {
     "residing at Mannerheimintie 42, Helsinki. Phone +358 44 9876543. " +
     "IBAN: FI4950000120000062. Y-tunnus: 2345678-0."
   ),
-  "Messy — abbreviations": (
+  "Messy: abbreviations": (
     "pt: J. Smith, dob 3/15/85, ssn 123-45-6789, dx: T2DM, rx: metformin 500mg bid"
   ),
   "Dense PII dump": (
@@ -25,7 +25,12 @@ window.PRESERVE_EXAMPLES = {
     "Addr: 7 Park Avenue / Tel: +358501234567 / " +
     "IBAN: FI2112345600000785 / Passport: XK4567890"
   ),
-  "Safe text — no PII": (
+  "International names (bare)": (
+    "Forwarded note: Hiroshi Tanaka met Priya Sharma and Lars Andersen last week. " +
+    "Please cc João Silva and Giulia Romano, then follow up with Carlos Hernandez " +
+    "about the Yilmaz contract. Andrzej Kowalski signs off Friday."
+  ),
+  "Safe text: no PII": (
     "The algorithm processes data in parallel using 8 threads across the CPU cores. " +
     "Version 4.2 includes improved performance metrics and better error handling."
   ),

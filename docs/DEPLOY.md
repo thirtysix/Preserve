@@ -34,7 +34,7 @@ docker compose up --build -d        # starts api (127.0.0.1:8800) + redis
 curl http://127.0.0.1:8800/health
 ```
 
-Compose binds the API to `127.0.0.1` on purpose — a reverse proxy terminates TLS and is
+Compose binds the API to `127.0.0.1` on purpose: a reverse proxy terminates TLS and is
 the only thing exposed publicly. Redis provides rate-limit state shared across workers
 (the app auto-detects `REDIS_URL`; without it, it falls back to in-memory limiting).
 
@@ -51,7 +51,7 @@ preserve.example.org {
 }
 ```
 
-`caddy reload` — Caddy obtains and renews a Let's Encrypt cert automatically.
+`caddy reload`; Caddy obtains and renews a Let's Encrypt cert automatically.
 
 ### nginx + certbot
 
@@ -103,11 +103,11 @@ sudo systemctl enable --now preserve-api
 
 If the box already runs other sites behind one nginx + certbot:
 
-1. **DNS** — point `preserve.example.org` at the VM (A/AAAA at your registrar).
-2. **Backend** — run the gateway on `127.0.0.1:8800` (Compose or systemd above).
-3. **vhost** — add the nginx server block from §3, then `sudo nginx -t && sudo systemctl reload nginx`.
-4. **Cert** — `sudo certbot --nginx -d preserve.example.org`.
-5. **Verify** — `curl https://preserve.example.org/health`, then a real `/v1/chat/completions` call.
+1. **DNS**: point `preserve.example.org` at the VM (A/AAAA at your registrar).
+2. **Backend**: run the gateway on `127.0.0.1:8800` (Compose or systemd above).
+3. **vhost**: add the nginx server block from §3, then `sudo nginx -t && sudo systemctl reload nginx`.
+4. **Cert**: `sudo certbot --nginx -d preserve.example.org`.
+5. **Verify**: `curl https://preserve.example.org/health`, then a real `/v1/chat/completions` call.
 
 This adds a site without touching the existing ones. Roll back by removing the vhost and reloading nginx.
 

@@ -2,10 +2,10 @@
 
 Privacy-preserving PII detection and scrubbing for LLM inference queries. Preserve detects and removes personally identifiable information from your prompts **before they leave your machine**, then re-inserts the original values into responses locally.
 
-- **Local-first** — detection runs on your machine; nothing is sent to scrub PII.
-- **Reversible** — every redaction maps to a placeholder (`[NAME_1]`) and restores exactly.
-- **International** — 49+ regex patterns and 9 checksum validators across 15+ countries.
-- **Layered** — fast deterministic detection, with an optional local LLM for the hard cases.
+- **Local-first:** detection runs on your machine; nothing is sent to scrub PII.
+- **Reversible:** every redaction maps to a placeholder (`[NAME_1]`) and restores exactly.
+- **International:** 49+ regex patterns and 9 checksum validators across 15+ countries.
+- **Layered:** fast deterministic detection, with an optional local LLM for the hard cases.
 
 [![CI](https://github.com/thirtysix/Preserve/actions/workflows/ci.yml/badge.svg)](https://github.com/thirtysix/Preserve/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
@@ -13,11 +13,11 @@ Privacy-preserving PII detection and scrubbing for LLM inference queries. Preser
 
 ## Live Demo
 
-A browser-based demo of the **deterministic** detection layer (regex + checksum validation) runs entirely client-side — no data leaves your browser:
+A browser-based demo of the **deterministic** detection layer (regex + checksum validation) runs entirely client-side; no data leaves your browser:
 
 **→ https://thirtysix.github.io/Preserve/** *(enabled when the repository is public)*
 
-The live tool adds the hybrid name scorer and optional local LLM review, which require the Python package below.
+The demo also runs a compact build of the gazetteer name scorer, so it catches bare names across 55 countries. The Python package adds the full name scorer (the complete names-dataset) and the optional local LLM review described below.
 
 ## Architecture
 
@@ -40,12 +40,12 @@ Layer 2: DETECTION PIPELINE
 Layer 3: LOCAL LLM REVIEW (optional)
     │   Qwen3.5-0.8B via llama-server or llama-cpp-python
     │   Reviews suspicious regions with >>>..<<< markers
-    │   Runs locally — nothing leaves the machine
+    │   Runs locally; nothing leaves the machine
     ▼
 Output: sanitized text + reversible placeholder map
 ```
 
-The browser demo implements **Layers 2a + 2c + 2d** (regex, checksums, context scoring), so it also catches names that carry a title or label ("Dr. Lee", "Patient: Aurora Rossi"). Layers 2b/2g/2h and Layer 3 require the Python package.
+The browser demo implements **Layers 2a + 2c + 2d** (regex, checksums, context scoring) plus a compact build of the **2h** name gazetteer, so it catches both titled names ("Dr. Lee", "Patient: Aurora Rossi") and bare names across 55 countries ("Mikko Virtanen", "Hiroshi Tanaka"). Layers 2b/2g, the complete names-dataset, and Layer 3 require the Python package.
 
 ## Performance
 
@@ -56,7 +56,7 @@ Layer 2 only. Reproduce with `python tests/test_against_dataset.py`.
 
 | Dataset | Layer 2 only | Layer 2 + LLM |
 | --- | --- | --- |
-| Clean data (100 rows, 1200 PII items) | **99.8%** | — |
+| Clean data (100 rows, 1200 PII items) | **99.8%** | n/a |
 | Messy data (23 cases, 82 PII items) | **87.8%** | ~87% on hardest subset |
 
 All 100 clean rows also round-trip exactly (scrub → restore reproduces the original).
@@ -74,7 +74,7 @@ All 100 clean rows also round-trip exactly (scrub → restore reproduces the ori
 
 > Detection rates are highest in context. Several patterns (passport, address, names)
 > intentionally require a nearby keyword, so a bare value scrubbed *with no surrounding
-> text* scores lower — the test script reports that isolated-value lower bound too.
+> text* scores lower; the test script reports that isolated-value lower bound too.
 
 ### Layer 3 inference speed
 
@@ -115,7 +115,7 @@ print(response.text)  # PII scrubbed before sending, restored in response
 ## Scrub and Restore
 
 Every redaction is reversible. `scrub()` returns a `placeholder_map` that maps each
-placeholder back to its original value, so you can restore the real data locally — either
+placeholder back to its original value, so you can restore the real data locally: either
 the original text or, more usefully, a model's **response** that still contains placeholders.
 
 ```python
@@ -148,17 +148,113 @@ print(scrubber.restore(model_response, result.placeholder_map))
 ```
 
 The mapping also serializes (`placeholder_map.to_dict()` / `PlaceholderMap.from_dict(...)`),
-so the scrub and restore steps can happen in different processes — useful for the API setup below.
+so the scrub and restore steps can happen in different processes, which is useful for the API setup below.
+
+## Workflows
+
+A few common ways to put Preserve to work. In every case the raw PII stays on the local
+machine; only placeholders ever travel to a third-party model.
+
+### 1. Protect an existing chatbot or agent
+
+Already calling an OpenAI-compatible endpoint? Route the call through `PreserveClient` and
+the rest of your app is unchanged. PII is scrubbed before the request leaves, and the
+model's answer comes back with the real values restored.
+
+```python
+from preserve import create_client, SensitivityLevel
+
+client = create_client(
+    api_key="your-deepinfra-or-openai-key",
+    model="meta-llama/Llama-3.3-70B-Instruct",
+    sensitivity_level=SensitivityLevel.STANDARD,
+)
+
+reply = client.chat([
+    {"role": "system", "content": "You are a clinical scheduling assistant."},
+    {"role": "user", "content": "Book a follow-up for Mikko Virtanen (HETU 131052-308T)."},
+])
+print(reply.text)   # the upstream model only ever saw [NAME_1] and [FINLAND_HETU_1]
+```
+
+### 2. Scrub here, infer anywhere (reversible hand-off)
+
+When the model call happens somewhere you do not control (a hosted notebook, a colleague's
+tool, a separate service), scrub first, carry the placeholder map alongside the sanitized
+text, and restore the response when it comes back. The map serializes to plain JSON, so the
+two halves can run in different processes or on different machines.
+
+```python
+import json
+from preserve import Scrubber, PreserveConfig, PlaceholderMap
+
+scrubber = Scrubber(PreserveConfig(use_name_scorer=True))
+
+# 1. Scrub locally
+result = scrubber.scrub("Email jane@acme.com the lab results for patient John Smith.")
+sanitized = result.sanitized_text                        # "Email [EMAIL_1] the lab results for patient [NAME_1]."
+map_json = json.dumps(result.placeholder_map.to_dict())  # store or transmit this safely
+
+# 2. ... send `sanitized` to any model or tool; get back a response that reuses the placeholders ...
+response = "Sent [EMAIL_1] the results and flagged [NAME_1] for follow-up."
+
+# 3. Restore locally with the saved map
+pm = PlaceholderMap.from_dict(json.loads(map_json))
+print(scrubber.restore(response, pm))
+# "Sent jane@acme.com the results and flagged John Smith for follow-up."
+```
+
+### 3. De-identify a dataset before analysis or sharing
+
+Scrub a whole CSV column-aware (each column classified by its header name), or scrub records
+in your own code. Useful for handing data to analysts, notebooks, or outside collaborators.
+
+```bash
+# Column-aware CSV scrub (writes a de-identified copy)
+python -m preserve scrub-csv patients.csv -o patients.deid.csv
+```
+
+```python
+from preserve.structured import StructuredScrubber
+
+scrubber = StructuredScrubber()
+record = {
+    "full_name": "Aino Korhonen",
+    "email": "aino@example.com",
+    "notes": "called re HETU 150390A234B",
+}
+clean, pm = scrubber.scrub_dict(record)
+# {'full_name': '[NAME_1]', 'email': '[EMAIL_1]', 'notes': 'called re [FINLAND_HETU_1]'}
+```
+
+### 4. PII pre-flight audit (no scrubbing)
+
+Use detect-only to find leaks before they happen, for example as a pre-commit hook or CI
+gate that blocks text/markdown/CSV files containing PII. `detect` emits JSON and reads stdin.
+
+```bash
+# Fail the step if any staged doc contains PII
+for f in $(git diff --cached --name-only --diff-filter=ACM | grep -E '\.(md|txt|csv)$'); do
+  n=$(python -m preserve detect - -f json < "$f" | jq 'length')
+  [ "$n" -gt 0 ] && { echo "PII detected in $f ($n items)"; exit 1; }
+done
+```
+
+### 5. One gateway for a whole team
+
+For many (often non-technical) users, run the [API gateway](#api-gateway-central-deployment)
+below: everyone points their existing OpenAI client at one URL, PII never reaches the upstream
+provider, and no per-user code changes are needed.
 
 ## API Gateway (central deployment)
 
 For teams where many (possibly non-technical) people make LLM calls, run Preserve as a
 **central gateway**: an OpenAI-compatible proxy that scrubs PII before forwarding to the
 upstream model and restores it in the response. Users point their existing OpenAI SDK at the
-gateway — no other code changes.
+gateway, with no other code changes.
 
 > **Trust model:** in this mode PII leaves the user's machine but stays **inside your
-> organization** — it never reaches the third-party LLM provider (OpenAI/Anthropic/DeepInfra).
+> organization**: it never reaches the third-party LLM provider (OpenAI/Anthropic/DeepInfra).
 > The placeholder map lives only for the duration of a request and is never persisted; audit
 > logs record detection *counts*, never values. (If you need PII to never leave the device at
 > all, scrub client-side with the library instead.)
@@ -171,7 +267,7 @@ export PRESERVE_API_KEYS='{"sk-team-alpha":{"name":"alpha","rpm":60,"daily_token
 ```
 
 ```python
-# Any OpenAI client works — just change base_url and use a gateway key:
+# Any OpenAI client works; just change base_url and use a gateway key:
 from openai import OpenAI
 client = OpenAI(base_url="http://your-server:8800/v1", api_key="sk-team-alpha")
 
@@ -194,7 +290,7 @@ Built in: per-key API-key auth (`Authorization: Bearer …`), per-key requests/m
 quotas, input-size caps, and PII-free audit logging (`logs/api_audit.jsonl`). Rate limiting is
 in-memory by default and uses **Redis** automatically when `REDIS_URL` is set (multi-worker/host).
 
-**Production deploy** (Docker Compose + Redis, TLS, systemd, shared-host) — see
+**Production deploy** (Docker Compose + Redis, TLS, systemd, shared-host), see
 [`docs/DEPLOY.md`](docs/DEPLOY.md):
 
 ```bash
@@ -263,7 +359,7 @@ config = PreserveConfig(use_llm_review=True, llm_backend="embedded",
 
 ### Using a different model
 
-Preserve works with **any GGUF model** — the Qwen3.5 presets are just convenient defaults.
+Preserve works with **any GGUF model**; the Qwen3.5 presets are just convenient defaults.
 To use another model (e.g. from Hugging Face), download the `.gguf` and point Preserve at it
 by its full path. For example, with a Llama or Mistral GGUF:
 
@@ -274,13 +370,13 @@ huggingface-cli download bartowski/Llama-3.2-3B-Instruct-GGUF \
 ```
 
 ```python
-# Embedded backend — just set the path:
+# Embedded backend, just set the path:
 config = PreserveConfig(use_llm_review=True, llm_backend="embedded",
                         llm_model_path="models/Llama-3.2-3B-Instruct-Q4_K_M.gguf")
 ```
 
 ```bash
-# Server backend — launch llama-server on that file, then use llm_backend="server":
+# Server backend: launch llama-server on that file, then use llm_backend="server":
 vendor/llama.cpp/build/bin/llama-server -m models/Llama-3.2-3B-Instruct-Q4_K_M.gguf \
     -ngl 99 --reasoning off --host 127.0.0.1 --port 8090
 ```
@@ -288,7 +384,7 @@ vendor/llama.cpp/build/bin/llama-server -m models/Llama-3.2-3B-Instruct-Q4_K_M.g
 > Larger models detect more but run slower; see the [inference table](#layer-3-inference-speed).
 > GPU inference requires the native `llama-server` (built with CUDA). The embedded
 > `llama-cpp-python` backend is CPU-only. Instruction-tuned models with a "thinking" mode
-> (like Qwen3.5) must have it disabled — Preserve does this automatically. See
+> (like Qwen3.5) must have it disabled; Preserve does this automatically. See
 > [`docs/LLM_BENCHMARK.md`](docs/LLM_BENCHMARK.md).
 
 ## Configuration
@@ -310,7 +406,7 @@ config = PreserveConfig(
 
 ## Dashboards
 
-**Browser demo (static, deterministic only):** open `docs/index.html` locally, or visit the [live demo](https://thirtysix.github.io/Preserve/) once the repo is public. Runs regex + checksum detection 100% client-side.
+**Browser demo (static, deterministic only):** open `docs/index.html` locally, or visit the [live demo](https://thirtysix.github.io/Preserve/) once the repo is public. Runs regex + checksum detection and a compact name gazetteer (55 countries) 100% client-side.
 
 **Full Gradio app (all layers):**
 
@@ -322,9 +418,9 @@ python dashboard.py
 
 Three tabs:
 
-- **Scrub** — input/output panels with 12 preloaded examples (clean, messy, multilingual, safe text). Toggle Layer 1/2/3 and sensitivity. Per-item detection table.
-- **CSV Scrub** — upload a CSV for structured scrubbing with automatic column classification.
-- **Compare** — run the same text through two configurations side by side.
+- **Scrub:** input/output panels with 12 preloaded examples (clean, messy, multilingual, safe text). Toggle Layer 1/2/3 and sensitivity. Per-item detection table.
+- **CSV Scrub:** upload a CSV for structured scrubbing with automatic column classification.
+- **Compare:** run the same text through two configurations side by side.
 
 ## CLI
 
@@ -375,7 +471,7 @@ docs/                  # Research + static browser demo
   LLM_BENCHMARK.md     # Layer 3 model comparison (incl. GPU benchmarks)
   DEPLOY.md            # API gateway production deployment (Docker, TLS, Redis)
 
-scripts/               # Utilities (server, model download, benchmarks, pattern export)
+scripts/               # Utilities (server, model download, benchmarks, pattern + name-gazetteer export)
 poc/                   # Proof-of-concept demos
 tests/                 # 87 unit tests + benchmarks
 dashboard.py           # Gradio web dashboard (all layers)
@@ -386,7 +482,7 @@ dashboard.py           # Gradio web dashboard (all layers)
 - **Single common-word names** ("Kim", "Grace" alone) may not be detected without context.
 - **Deliberately redacted data** ("SSN ending in 6789") is partially detected.
 - **Streaming** responses are not yet supported.
-- **Browser demo** covers the deterministic layers (regex, checksums, context scoring) and catches names with a title/label; bare names in free text need the Python package's name scorer or local LLM.
+- **Browser demo** covers the deterministic layers (regex, checksums, context scoring) and a compact name gazetteer that catches bare names across 55 countries; the complete names-dataset and the local LLM (for the hardest cases) need the Python package.
 
 ## License
 

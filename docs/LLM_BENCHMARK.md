@@ -2,7 +2,7 @@
 
 ## Overview
 
-This benchmark evaluates small local LLM models for use as Preserve's Layer 3 PII reviewer. Layer 3 examines text regions that the normalcy scanner (Layer 1) flagged as suspicious but regex pattern matching (Layer 2) could not confidently classify. The LLM runs entirely locally — no data leaves the machine.
+This benchmark evaluates small local LLM models for use as Preserve's Layer 3 PII reviewer. Layer 3 examines text regions that the normalcy scanner (Layer 1) flagged as suspicious but regex pattern matching (Layer 2) could not confidently classify. The LLM runs entirely locally; no data leaves the machine.
 
 Two backends are supported:
 - **Server** (recommended): Native llama-server via OpenAI-compatible HTTP API. Start with `./scripts/start_llm_server.sh [gpu|cpu]`.
@@ -37,7 +37,7 @@ The benchmarks below were run using the **embedded (llama-cpp-python)** backend 
 | Qwen3.5-2B | 66.7% | 38.7% | 0.490 | 10.3s | 1.0s |
 | Qwen3.5-4B | **80.0%** | 51.6% | 0.627 | 24.2s | 1.9s |
 
-**Selected model**: Qwen3.5-0.8B Q4_K_M — best F1 score, fastest inference, smallest footprint.
+**Selected model**: Qwen3.5-0.8B Q4_K_M: best F1 score, fastest inference, smallest footprint.
 
 ## Per-Case Results
 
@@ -123,15 +123,15 @@ The benchmarks below were run using the **embedded (llama-cpp-python)** backend 
 
 ## Key Findings
 
-1. **The 0.8B model is the best overall choice** — highest F1 (0.644), fastest (6.9s/region), smallest (508 MB). The 2B model paradoxically performed worst.
+1. **The 0.8B model is the best overall choice**: highest F1 (0.644), fastest (6.9s/region), smallest (508 MB). The 2B model paradoxically performed worst.
 
-2. **All models excel at mixed/contextual PII** — when text contains multiple PII types with surrounding context (the `mixed_pii` and `dataset_row_narrative` cases), all models detected 5-6 of 6 items. This is exactly what Layer 3 receives from the normalcy scanner.
+2. **All models excel at mixed/contextual PII**: when text contains multiple PII types with surrounding context (the `mixed_pii` and `dataset_row_narrative` cases), all models detected 5-6 of 6 items. This is exactly what Layer 3 receives from the normalcy scanner.
 
-3. **All models struggle with short, isolated fragments** — bare names, standalone addresses, and dates in isolation are hard for small models. This is acceptable because Layer 2 (regex) handles structured patterns, and Layer 3 only processes regions with surrounding context.
+3. **All models struggle with short, isolated fragments**: bare names, standalone addresses, and dates in isolation are hard for small models. This is acceptable because Layer 2 (regex) handles structured patterns, and Layer 3 only processes regions with surrounding context.
 
-4. **False positives cluster around medical/geographic data** — all models occasionally flag disease names, country names, and blood types as PII. This can be mitigated by filtering detections against the normalcy scanner's safe-text patterns.
+4. **False positives cluster around medical/geographic data**: all models occasionally flag disease names, country names, and blood types as PII. This can be mitigated by filtering detections against the normalcy scanner's safe-text patterns.
 
-5. **Thinking mode must be disabled** — Qwen3.5 models enter `<think>` mode in completion prompts, consuming tokens on reasoning instead of outputting JSON. Using chat mode with `/no_think` in the system prompt resolves this, reducing 4B inference from ~80s to ~24s per region.
+5. **Thinking mode must be disabled**: Qwen3.5 models enter `<think>` mode in completion prompts, consuming tokens on reasoning instead of outputting JSON. Using chat mode with `/no_think` in the system prompt resolves this, reducing 4B inference from ~80s to ~24s per region.
 
 ## Methodology
 
@@ -154,7 +154,7 @@ The benchmarks below were run using the **embedded (llama-cpp-python)** backend 
   | Qwen3.5-2B | 10.29s | 0.39s | 0.14s | ~26× |
   | Qwen3.5-4B | 24.17s | 1.74s | 0.86s | ~14× |
 
-  All layers offloaded to GPU (0.8B/2B: 25/25, 4B: 33/33); VRAM use 1.2/2.0/3.6 GB respectively (all fit in 6 GB). Peak GPU temperature 82 °C during the 4B run — no thermal throttling observed. Measured 2026-06-21.
+  All layers offloaded to GPU (0.8B/2B: 25/25, 4B: 33/33); VRAM use 1.2/2.0/3.6 GB respectively (all fit in 6 GB). Peak GPU temperature 82 °C during the 4B run, with no thermal throttling observed. Measured 2026-06-21.
 - The Q4_K_M quantization was used for all models. Higher quantization (Q8_0) may improve accuracy at the cost of memory and speed.
 
 ## Backend Comparison (Qwen3.5-0.8B, same test case)
@@ -188,7 +188,7 @@ Two prompt strategies were tested on 10 cases:
 | **selected** | **100%** | **73.7%** | **0.848** | 9.9s | 1-2 examples matched to input PII types |
 | comprehensive | 91.7% | 57.9% | 0.710 | 6.2s | Single dense example covering 7 types |
 
-"Selected" mode is the default — it picks the most relevant examples from a bank of 6, producing better accuracy at a small speed cost.
+"Selected" mode is the default; it picks the most relevant examples from a bank of 6, producing better accuracy at a small speed cost.
 
 ### Prompt Architecture (current)
 - No system message (critical for 0.8B Qwen3.5)
@@ -210,4 +210,4 @@ Layer 3 caught items Layer 2 couldn't:
 - "MEX-2345-6789" (custom ID format)
 - "april 5th" (natural language date without year)
 
-The LLM only fired on 4 of 10 cases — staying quiet when Layer 2 had things covered.
+The LLM only fired on 4 of 10 cases, staying quiet when Layer 2 had things covered.

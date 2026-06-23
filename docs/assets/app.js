@@ -1,5 +1,5 @@
 /*
- * Preserve — static browser demo of the deterministic detection layer.
+ * Preserve: static browser demo of the deterministic detection layer.
  *
  * Mirrors the Python pipeline for Layer 2a (regex) + Layer 2c (checksums):
  *   detectPatterns -> validateChecksums -> deduplicate -> scrub
@@ -160,6 +160,158 @@
   }
   const PATTERNS = compilePatterns();
 
+  // --- Layer 2h (compact): gazetteer name scorer (ported from name_scorer.py) ---
+  // Detects bare personal names across major countries using the name list in
+  // names.js (distilled from names-dataset + wordfreq). This is what the full
+  // Python pipeline's name scorer / local LLM would catch beyond the regexes.
+  const NAMES = window.PRESERVE_NAMES || { first: [], last: [], common: [], countries: 0 };
+  const FIRST = new Set(NAMES.first);
+  const LAST = new Set(NAMES.last);
+  const COMMON = new Set(NAMES.common);
+  const inGaz = (t) => FIRST.has(t) || LAST.has(t);
+
+  const NAME_SKIP = new Set([
+    "the","a","an","and","or","but","for","nor","yet","so","is","are","was",
+    "were","be","been","being","has","have","had","do","does","did","will",
+    "would","shall","should","can","could","may","might","this","that","these",
+    "those","it","its","not","no","yes","all","any","each","every","i","we",
+    "you","he","she","they","me","us","him","her","them","my","our","your",
+    "his","their","who","what","where","when","why","how","if","then","else",
+    "than","as","at","by","in","on","to","of","with","from","into","about",
+    "new","old","best","first","last","next","north","south","east","west",
+    "need","want","called","said","told","asked","check","send","get","got",
+    "helsinki","finland","europe","asia","africa","america","london","paris",
+    "berlin","rome","tokyo","moscow","stockholm","oslo","copenhagen","amsterdam",
+    "brussels","madrid","lisbon","vienna","prague","warsaw","budapest",
+  ]);
+  const NAME_CONTEXT_WORDS = new Set([
+    "patient","client","employee","name","contact","witness","supervisor",
+    "manager","doctor","nurse","attorney","applicant","customer","user",
+    "beneficiary","spouse","guardian","dependent","plaintiff","defendant",
+    "caller","attendee","participant","sender","recipient",
+  ]);
+  const TITLE_WORDS = new Set(["mr","mrs","ms","miss","dr","prof","professor","rev","sir","lady"]);
+  const INTRO_WORDS = new Set([
+    "wife","husband","mother","father","son","daughter",
+    "patient","pt","caller","contact","employee","emp","attn",
+  ]);
+  const SURNAME_SUFFIX = /(?:nen|la|lä|sto|son|sen|ström|berg|lund|qvist|ez|az|ov|ova|ski|ska|vich|enko|ian|yan|ou|is|os|ić|ović)$/i;
+  const NAME_CTX_BEFORE = /(?:patient|client|employee|name|contact|witness|supervisor|manager|doctor|nurse|attorney|signed by|referred by|mr|mrs|ms|miss|dr|prof|wife|husband|spouse|mother|father|son|daughter|caller|attendee|participant|sender|recipient|pt|emp|attn|fwd|re|cc)\s*[:.\s]?\s*$/i;
+  const CAP_TOKEN = /[A-ZÀ-ÖØ-Þ][a-zà-öø-ÿ]+(?:-[A-ZÀ-ÖØ-Þa-zà-öø-ÿ]+)*/g;
+  const WORD_TOKEN = /[a-zA-ZÀ-ÖØ-Þà-öø-ÿ]{2,}/g;
+  const INITIAL_SURNAME = /([A-ZÀ-ÖØ-Þ])\.\s*([A-ZÀ-ÖØ-Þ][a-zà-öø-ÿ]{2,})/g;
+  const PAREN_NAME = /([A-ZÀ-ÖØ-Þa-zà-öø-ÿ]+)\s*\(([A-ZÀ-ÖØ-Þ][a-zà-öø-ÿ]+)\)/g;
+
+  function scoreNameTokens(tokens, text, start) {
+    let score = 0;
+    for (const raw of tokens) {
+      const t = raw.toLowerCase();
+      const gaz = inGaz(t);
+      if (gaz) {
+        score += COMMON.has(t) ? 0.1 : 0.4;   // common word-name penalised
+        if (SURNAME_SUFFIX.test(t)) score += 0.1;
+      } else {
+        score += COMMON.has(t) ? -0.2 : 0.05;
+      }
+    }
+    if (tokens.length >= 2) score += 0.2;
+    const before = text.slice(Math.max(0, start - 40), start);
+    if (NAME_CTX_BEFORE.test(before)) score += 0.4;
+    if ((start === 0 || ".!?\n".includes(text[start - 1])) && tokens.length === 1) score -= 0.2;
+    return Math.max(0, Math.min(1, score));
+  }
+
+  function tokenize(re, text) {
+    const out = [];
+    for (const m of text.matchAll(re)) out.push([m.index, m.index + m[0].length, m[0]]);
+    return out;
+  }
+
+  function detectNames(text, minScore = 0.5) {
+    const cands = [];
+    const mk = (s, e, conf) => cands.push({
+      start: s, end: e, value: text.slice(s, e),
+      pattern: "name_scorer", type: "NAME", layer: "name", confidence: conf,
+    });
+
+    // Pass 1: capitalized word sequences
+    const caps = tokenize(CAP_TOKEN, text);
+    for (let i = 0; i < caps.length;) {
+      const [s0, e0, t0] = caps[i];
+      if (NAME_SKIP.has(t0.toLowerCase()) || NAME_CONTEXT_WORDS.has(t0.toLowerCase())) { i++; continue; }
+      const run = [caps[i]];
+      let j = i + 1;
+      while (j < caps.length) {
+        const [ns, , nt] = caps[j];
+        if (ns - run[run.length - 1][1] <= 2
+            && !NAME_SKIP.has(nt.toLowerCase())
+            && !NAME_CONTEXT_WORDS.has(nt.toLowerCase())) { run.push(caps[j]); j++; }
+        else break;
+      }
+      if (run.length >= 2) {
+        const fs = run[0][0], fe = run[run.length - 1][1];
+        const sc = scoreNameTokens(run.map((r) => r[2]), text, fs);
+        if (sc >= minScore) mk(fs, fe, sc);
+        i = j;
+      } else {
+        const sc = scoreNameTokens([t0], text, s0);
+        if (sc >= minScore + 0.1 && inGaz(t0.toLowerCase())) mk(s0, e0, sc);
+        i++;
+      }
+    }
+
+    // Pass 2: lowercase gazetteer pairs ("mikko virtanen")
+    const words = tokenize(WORD_TOKEN, text);
+    for (let i = 0; i < words.length - 1; i++) {
+      const [s1, e1, w1] = words[i];
+      const [s2, e2, w2] = words[i + 1];
+      if (w1[0] === w1[0].toUpperCase() && w2[0] === w2[0].toUpperCase()) continue;
+      const t1 = w1.toLowerCase(), t2 = w2.toLowerCase();
+      if (NAME_SKIP.has(t1) || NAME_SKIP.has(t2)) continue;
+      if (NAME_CONTEXT_WORDS.has(t1) || NAME_CONTEXT_WORDS.has(t2)) continue;
+      if (s2 - e1 > 2) continue;
+      const pair = (FIRST.has(t1) && LAST.has(t2)) || (LAST.has(t1) && FIRST.has(t2));
+      if (!pair) continue;
+      if (COMMON.has(t1) && COMMON.has(t2)) continue;
+      let sc = 0.35;
+      if (!COMMON.has(t1)) sc += 0.15;
+      if (!COMMON.has(t2)) sc += 0.15;
+      if (SURNAME_SUFFIX.test(t2)) sc += 0.1;
+      if (NAME_CTX_BEFORE.test(text.slice(Math.max(0, s1 - 40), s1))) sc += 0.4;
+      if (sc >= minScore) mk(s1, e2, Math.min(1, sc));
+    }
+
+    // Pass 3: initial + surname ("J. Smith")
+    for (const m of text.matchAll(INITIAL_SURNAME)) {
+      if (inGaz(m[2].toLowerCase())) mk(m.index, m.index + m[0].length, 0.7);
+    }
+    // Pass 4: parenthetical reveal ("V (Virtanen)")
+    for (const m of text.matchAll(PAREN_NAME)) {
+      if (inGaz(m[2].toLowerCase())) mk(m.index, m.index + m[0].length, 0.8);
+    }
+
+    // Pass 5: single name after a title/context keyword ("mrs korhonen", "patient Mikko")
+    const allKw = new Set([...TITLE_WORDS, ...INTRO_WORDS]);
+    for (let i = 0; i < words.length; i++) {
+      if (!allKw.has(words[i][2].toLowerCase())) continue;
+      for (let j = i + 1; j < Math.min(i + 3, words.length); j++) {
+        const nl = words[j][2].toLowerCase();
+        if (TITLE_WORDS.has(nl) || INTRO_WORDS.has(nl) || NAME_CONTEXT_WORDS.has(nl) || NAME_SKIP.has(nl)) continue;
+        if (words[j][0] - words[j - 1][1] > 3) break;
+        if (inGaz(nl)) mk(words[j][0], words[j][1], 0.7);
+        break;
+      }
+    }
+
+    // Local dedup: highest score, keep non-overlapping
+    cands.sort((a, b) => (b.confidence - a.confidence) || (a.start - b.start));
+    const kept = [];
+    for (const c of cands) {
+      if (!kept.some((k) => c.start < k.end && c.end > k.start)) kept.push(c);
+    }
+    return kept;
+  }
+
   function detect(text, sensitivity) {
     const maxIdx = SENS_ORDER.indexOf(sensitivity);
     let matches = [];
@@ -204,6 +356,11 @@
       m.confidence = scoreContext(text, m.start, m.end, m.type, m.confidence);
     }
 
+    // Layer 2h: gazetteer name scorer (names are aggressive-tier)
+    if (sensitivity === "aggressive") {
+      matches = matches.concat(detectNames(text));
+    }
+
     // Deduplicate: highest confidence, then longest, keep non-overlapping
     matches.sort((a, b) =>
       (b.confidence - a.confidence) ||
@@ -222,18 +379,18 @@
     const counters = {};
     const valueToPlaceholder = new Map();
     const summary = {};
-    // Replace right-to-left so indices stay valid
-    const ordered = [...detections].sort((a, b) => b.start - a.start);
-    let out = text;
-    for (const d of ordered) {
+    // Assign placeholders left-to-right so numbering reads in document order
+    for (const d of [...detections].sort((a, b) => a.start - b.start)) {
       const key = d.value.toLowerCase();
-      let ph = valueToPlaceholder.get(key);
-      if (!ph) {
+      if (!valueToPlaceholder.has(key)) {
         counters[d.type] = (counters[d.type] || 0) + 1;
-        ph = `[${d.type}_${counters[d.type]}]`;
-        valueToPlaceholder.set(key, ph);
+        valueToPlaceholder.set(key, `[${d.type}_${counters[d.type]}]`);
       }
-      out = out.slice(0, d.start) + ph + out.slice(d.end);
+    }
+    // Replace right-to-left so indices stay valid
+    let out = text;
+    for (const d of [...detections].sort((a, b) => b.start - a.start)) {
+      out = out.slice(0, d.start) + valueToPlaceholder.get(d.value.toLowerCase()) + out.slice(d.end);
     }
     for (const d of detections) summary[d.type] = (summary[d.type] || 0) + 1;
     return { sanitized: out, summary };
@@ -249,29 +406,33 @@
     for (const d of ordered) {
       if (d.start < cursor) continue;
       html += esc(text.slice(cursor, d.start));
-      html += `<mark title="${esc(d.type)} (${d.layer})">${esc(text.slice(d.start, d.end))}</mark>`;
+      const cls = d.layer === "name" ? ' class="m-name"' : "";
+      html += `<mark${cls} title="${esc(d.type)} (${d.layer})">${esc(text.slice(d.start, d.end))}</mark>`;
       cursor = d.end;
     }
     html += esc(text.slice(cursor));
-    return html || '<span class="empty">—</span>';
+    return html || '<span class="empty">(nothing yet)</span>';
   }
 
   function renderScrubbed(sanitized) {
     return esc(sanitized).replace(/\[([A-Z_]+_\d+)\]/g, '<span class="ph">[$1]</span>')
-           || '<span class="empty">—</span>';
+           || '<span class="empty">(nothing yet)</span>';
   }
 
   function renderTable(detections) {
     if (!detections.length) return '<p class="empty">No PII detected at this sensitivity level.</p>';
     let rows = "";
     for (const d of [...detections].sort((a, b) => a.start - b.start)) {
-      const checksum = d.checksum
-        ? `<span class="layer-checksum">checksum&nbsp;${d.checksum}</span>` : "regex";
+      const detectedBy = d.layer === "name"
+        ? `<span class="layer-name">name&nbsp;scorer</span>`
+        : d.checksum
+          ? `<span class="layer-checksum">checksum&nbsp;${d.checksum}</span>`
+          : "regex";
       rows += `<tr>
         <td><span class="type">${esc(d.type)}</span></td>
         <td class="val">${esc(d.value)}</td>
         <td>${esc(d.pattern)}</td>
-        <td>${checksum}</td>
+        <td>${detectedBy}</td>
         <td><span class="conf-bar" style="width:${Math.round(d.confidence * 46)}px"></span>
             &nbsp;${d.confidence.toFixed(2)}</td>
       </tr>`;
@@ -296,8 +457,9 @@
     const chips = Object.entries(summary)
       .map(([t, n]) => `<span class="chip">${esc(t)} × ${n}</span>`).join("");
     $("summary").innerHTML = chips || '<span class="empty">No PII detected.</span>';
+    const nameNote = sensitivity === "aggressive" ? ` + name scorer (${NAMES.countries} countries)` : "";
     $("stat").textContent =
-      `${detections.length} item(s) detected · ${text.length} chars · ${PATTERNS.length} patterns active at "${sensitivity}"`;
+      `${detections.length} item(s) detected · ${text.length} chars · ${PATTERNS.length} patterns active at "${sensitivity}"${nameNote}`;
     $("table").innerHTML = renderTable(detections);
   }
 
