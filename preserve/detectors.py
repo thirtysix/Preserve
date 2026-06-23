@@ -305,13 +305,15 @@ class PIIDetector:
         """Layer 2g: optional NER-based detection."""
         nlp = self._load_ner()
         doc = nlp(text)
-        ner_type_map = {
+        full_map = {
             "PERSON": "NAME",
             "ORG": "ORG",
             "GPE": "LOCATION",
             "DATE": "DATE",
             "FAC": "LOCATION",
         }
+        allowed = set(self.config.ner_labels)
+        ner_type_map = {k: v for k, v in full_map.items() if k in allowed}
         matches: list[PIIMatch] = []
         for ent in doc.ents:
             if ent.label_ in ner_type_map:

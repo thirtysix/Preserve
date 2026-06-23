@@ -135,3 +135,11 @@ class PreserveConfig(BaseModel):
         default="en_core_web_sm",
         description="spaCy model to use when use_ner=True",
     )
+    ner_labels: list[str] = Field(
+        default_factory=lambda: ["PERSON", "GPE", "FAC", "DATE"],
+        description=(
+            "spaCy entity labels to accept when use_ner=True. Mapping: PERSON->NAME, "
+            "GPE/FAC->LOCATION, DATE->DATE, ORG->ORG. ORG is excluded by default because "
+            "it hurts precision with little PII value; add it only for maximum recall."
+        ),
+    )
