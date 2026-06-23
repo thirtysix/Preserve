@@ -1,0 +1,533 @@
+[
+  {
+    "model": "Qwen3.5-0.8B-Q4_K_M",
+    "load_time_s": 2.0,
+    "cases": [
+      {
+        "id": "bare_names_western",
+        "status": "FAIL",
+        "inference_time_s": 0.23,
+        "expected": 2,
+        "detected": 0,
+        "true_positives": 0,
+        "false_negatives": 2,
+        "false_positives": 0
+      },
+      {
+        "id": "bare_names_nordic",
+        "status": "PASS",
+        "inference_time_s": 0.27,
+        "expected": 2,
+        "detected": 2,
+        "true_positives": 2,
+        "false_negatives": 0,
+        "false_positives": 0
+      },
+      {
+        "id": "bare_names_asian",
+        "status": "FAIL",
+        "inference_time_s": 0.1,
+        "expected": 2,
+        "detected": 0,
+        "true_positives": 0,
+        "false_negatives": 2,
+        "false_positives": 0
+      },
+      {
+        "id": "bare_names_latin",
+        "status": "FAIL",
+        "inference_time_s": 0.1,
+        "expected": 2,
+        "detected": 0,
+        "true_positives": 0,
+        "false_negatives": 2,
+        "false_positives": 0
+      },
+      {
+        "id": "intl_address_italian",
+        "status": "PARTIAL",
+        "inference_time_s": 0.75,
+        "expected": 1,
+        "detected": 9,
+        "true_positives": 1,
+        "false_negatives": 0,
+        "false_positives": 8
+      },
+      {
+        "id": "intl_address_finnish",
+        "status": "PARTIAL",
+        "inference_time_s": 0.72,
+        "expected": 1,
+        "detected": 5,
+        "true_positives": 1,
+        "false_negatives": 0,
+        "false_positives": 4
+      },
+      {
+        "id": "intl_address_mexican",
+        "status": "PARTIAL",
+        "inference_time_s": 0.56,
+        "expected": 1,
+        "detected": 2,
+        "true_positives": 1,
+        "false_negatives": 0,
+        "false_positives": 1
+      },
+      {
+        "id": "intl_address_german",
+        "status": "FAIL",
+        "inference_time_s": 0.1,
+        "expected": 1,
+        "detected": 0,
+        "true_positives": 0,
+        "false_negatives": 1,
+        "false_positives": 0
+      },
+      {
+        "id": "standalone_dates",
+        "status": "PARTIAL",
+        "inference_time_s": 0.76,
+        "expected": 3,
+        "detected": 6,
+        "true_positives": 3,
+        "false_negatives": 0,
+        "false_positives": 3
+      },
+      {
+        "id": "passport_numbers",
+        "status": "FAIL",
+        "inference_time_s": 0.11,
+        "expected": 2,
+        "detected": 0,
+        "true_positives": 0,
+        "false_negatives": 2,
+        "false_positives": 0
+      },
+      {
+        "id": "mixed_pii",
+        "status": "FAIL",
+        "inference_time_s": 3.0,
+        "expected": 6,
+        "detected": 0,
+        "true_positives": 0,
+        "false_negatives": 6,
+        "false_positives": 0
+      },
+      {
+        "id": "no_pii_medical",
+        "status": "PASS",
+        "inference_time_s": 0.11,
+        "expected": 0,
+        "detected": 0,
+        "true_positives": 0,
+        "false_negatives": 0,
+        "false_positives": 0
+      },
+      {
+        "id": "no_pii_instructions",
+        "status": "PASS",
+        "inference_time_s": 0.11,
+        "expected": 0,
+        "detected": 0,
+        "true_positives": 0,
+        "false_negatives": 0,
+        "false_positives": 0
+      },
+      {
+        "id": "no_pii_technical",
+        "status": "PASS",
+        "inference_time_s": 0.11,
+        "expected": 0,
+        "detected": 0,
+        "true_positives": 0,
+        "false_negatives": 0,
+        "false_positives": 0
+      },
+      {
+        "id": "financial_data",
+        "status": "PARTIAL",
+        "inference_time_s": 0.55,
+        "expected": 2,
+        "detected": 3,
+        "true_positives": 2,
+        "false_negatives": 0,
+        "false_positives": 1
+      },
+      {
+        "id": "dataset_row_narrative",
+        "status": "PARTIAL",
+        "inference_time_s": 1.92,
+        "expected": 6,
+        "detected": 8,
+        "true_positives": 6,
+        "false_negatives": 0,
+        "false_positives": 2
+      }
+    ],
+    "total_expected": 31,
+    "total_detected": 35,
+    "true_positives": 16,
+    "false_positives": 19,
+    "false_negatives": 15,
+    "json_parse_failures": 0,
+    "total_inference_time_s": 9.480828046798706,
+    "precision": 0.457,
+    "recall": 0.516,
+    "f1": 0.485,
+    "avg_inference_time_s": 0.59
+  },
+  {
+    "model": "Qwen3.5-2B-Q4_K_M",
+    "load_time_s": 2.0,
+    "cases": [
+      {
+        "id": "bare_names_western",
+        "status": "FAIL",
+        "inference_time_s": 0.16,
+        "expected": 2,
+        "detected": 0,
+        "true_positives": 0,
+        "false_negatives": 2,
+        "false_positives": 0
+      },
+      {
+        "id": "bare_names_nordic",
+        "status": "FAIL",
+        "inference_time_s": 0.15,
+        "expected": 2,
+        "detected": 0,
+        "true_positives": 0,
+        "false_negatives": 2,
+        "false_positives": 0
+      },
+      {
+        "id": "bare_names_asian",
+        "status": "FAIL",
+        "inference_time_s": 0.15,
+        "expected": 2,
+        "detected": 0,
+        "true_positives": 0,
+        "false_negatives": 2,
+        "false_positives": 0
+      },
+      {
+        "id": "bare_names_latin",
+        "status": "FAIL",
+        "inference_time_s": 0.15,
+        "expected": 2,
+        "detected": 0,
+        "true_positives": 0,
+        "false_negatives": 2,
+        "false_positives": 0
+      },
+      {
+        "id": "intl_address_italian",
+        "status": "FAIL",
+        "inference_time_s": 0.15,
+        "expected": 1,
+        "detected": 0,
+        "true_positives": 0,
+        "false_negatives": 1,
+        "false_positives": 0
+      },
+      {
+        "id": "intl_address_finnish",
+        "status": "FAIL",
+        "inference_time_s": 0.15,
+        "expected": 1,
+        "detected": 0,
+        "true_positives": 0,
+        "false_negatives": 1,
+        "false_positives": 0
+      },
+      {
+        "id": "intl_address_mexican",
+        "status": "FAIL",
+        "inference_time_s": 0.15,
+        "expected": 1,
+        "detected": 0,
+        "true_positives": 0,
+        "false_negatives": 1,
+        "false_positives": 0
+      },
+      {
+        "id": "intl_address_german",
+        "status": "FAIL",
+        "inference_time_s": 0.15,
+        "expected": 1,
+        "detected": 0,
+        "true_positives": 0,
+        "false_negatives": 1,
+        "false_positives": 0
+      },
+      {
+        "id": "standalone_dates",
+        "status": "FAIL",
+        "inference_time_s": 0.17,
+        "expected": 3,
+        "detected": 0,
+        "true_positives": 0,
+        "false_negatives": 3,
+        "false_positives": 0
+      },
+      {
+        "id": "passport_numbers",
+        "status": "FAIL",
+        "inference_time_s": 0.2,
+        "expected": 2,
+        "detected": 0,
+        "true_positives": 0,
+        "false_negatives": 2,
+        "false_positives": 0
+      },
+      {
+        "id": "mixed_pii",
+        "status": "PARTIAL",
+        "inference_time_s": 1.36,
+        "expected": 6,
+        "detected": 5,
+        "true_positives": 4,
+        "false_negatives": 2,
+        "false_positives": 1
+      },
+      {
+        "id": "no_pii_medical",
+        "status": "PASS",
+        "inference_time_s": 0.16,
+        "expected": 0,
+        "detected": 0,
+        "true_positives": 0,
+        "false_negatives": 0,
+        "false_positives": 0
+      },
+      {
+        "id": "no_pii_instructions",
+        "status": "PASS",
+        "inference_time_s": 0.16,
+        "expected": 0,
+        "detected": 0,
+        "true_positives": 0,
+        "false_negatives": 0,
+        "false_positives": 0
+      },
+      {
+        "id": "no_pii_technical",
+        "status": "PASS",
+        "inference_time_s": 0.16,
+        "expected": 0,
+        "detected": 0,
+        "true_positives": 0,
+        "false_negatives": 0,
+        "false_positives": 0
+      },
+      {
+        "id": "financial_data",
+        "status": "FAIL",
+        "inference_time_s": 0.2,
+        "expected": 2,
+        "detected": 0,
+        "true_positives": 0,
+        "false_negatives": 2,
+        "false_positives": 0
+      },
+      {
+        "id": "dataset_row_narrative",
+        "status": "PARTIAL",
+        "inference_time_s": 4.18,
+        "expected": 6,
+        "detected": 9,
+        "true_positives": 6,
+        "false_negatives": 0,
+        "false_positives": 3
+      }
+    ],
+    "total_expected": 31,
+    "total_detected": 14,
+    "true_positives": 10,
+    "false_positives": 4,
+    "false_negatives": 21,
+    "json_parse_failures": 0,
+    "total_inference_time_s": 7.782446384429932,
+    "precision": 0.714,
+    "recall": 0.323,
+    "f1": 0.444,
+    "avg_inference_time_s": 0.49
+  },
+  {
+    "model": "Qwen3.5-4B-Q4_K_M",
+    "load_time_s": 2.0,
+    "cases": [
+      {
+        "id": "bare_names_western",
+        "status": "PASS",
+        "inference_time_s": 1.15,
+        "expected": 2,
+        "detected": 2,
+        "true_positives": 2,
+        "false_negatives": 0,
+        "false_positives": 0
+      },
+      {
+        "id": "bare_names_nordic",
+        "status": "FAIL",
+        "inference_time_s": 0.46,
+        "expected": 2,
+        "detected": 0,
+        "true_positives": 0,
+        "false_negatives": 2,
+        "false_positives": 0
+      },
+      {
+        "id": "bare_names_asian",
+        "status": "PASS",
+        "inference_time_s": 1.33,
+        "expected": 2,
+        "detected": 2,
+        "true_positives": 2,
+        "false_negatives": 0,
+        "false_positives": 0
+      },
+      {
+        "id": "bare_names_latin",
+        "status": "PASS",
+        "inference_time_s": 1.35,
+        "expected": 2,
+        "detected": 2,
+        "true_positives": 2,
+        "false_negatives": 0,
+        "false_positives": 0
+      },
+      {
+        "id": "intl_address_italian",
+        "status": "PASS",
+        "inference_time_s": 1.23,
+        "expected": 1,
+        "detected": 1,
+        "true_positives": 1,
+        "false_negatives": 0,
+        "false_positives": 0
+      },
+      {
+        "id": "intl_address_finnish",
+        "status": "PARTIAL",
+        "inference_time_s": 1.57,
+        "expected": 1,
+        "detected": 2,
+        "true_positives": 1,
+        "false_negatives": 0,
+        "false_positives": 1
+      },
+      {
+        "id": "intl_address_mexican",
+        "status": "PARTIAL",
+        "inference_time_s": 1.58,
+        "expected": 1,
+        "detected": 2,
+        "true_positives": 1,
+        "false_negatives": 0,
+        "false_positives": 1
+      },
+      {
+        "id": "intl_address_german",
+        "status": "PASS",
+        "inference_time_s": 1.25,
+        "expected": 1,
+        "detected": 1,
+        "true_positives": 1,
+        "false_negatives": 0,
+        "false_positives": 0
+      },
+      {
+        "id": "standalone_dates",
+        "status": "PASS",
+        "inference_time_s": 2.86,
+        "expected": 3,
+        "detected": 3,
+        "true_positives": 3,
+        "false_negatives": 0,
+        "false_positives": 0
+      },
+      {
+        "id": "passport_numbers",
+        "status": "PASS",
+        "inference_time_s": 2.17,
+        "expected": 2,
+        "detected": 2,
+        "true_positives": 2,
+        "false_negatives": 0,
+        "false_positives": 0
+      },
+      {
+        "id": "mixed_pii",
+        "status": "PARTIAL",
+        "inference_time_s": 4.11,
+        "expected": 6,
+        "detected": 2,
+        "true_positives": 2,
+        "false_negatives": 4,
+        "false_positives": 0
+      },
+      {
+        "id": "no_pii_medical",
+        "status": "PASS",
+        "inference_time_s": 0.62,
+        "expected": 0,
+        "detected": 0,
+        "true_positives": 0,
+        "false_negatives": 0,
+        "false_positives": 0
+      },
+      {
+        "id": "no_pii_instructions",
+        "status": "PASS",
+        "inference_time_s": 0.71,
+        "expected": 0,
+        "detected": 0,
+        "true_positives": 0,
+        "false_negatives": 0,
+        "false_positives": 0
+      },
+      {
+        "id": "no_pii_technical",
+        "status": "PASS",
+        "inference_time_s": 0.66,
+        "expected": 0,
+        "detected": 0,
+        "true_positives": 0,
+        "false_negatives": 0,
+        "false_positives": 0
+      },
+      {
+        "id": "financial_data",
+        "status": "PARTIAL",
+        "inference_time_s": 4.51,
+        "expected": 2,
+        "detected": 3,
+        "true_positives": 2,
+        "false_negatives": 0,
+        "false_positives": 1
+      },
+      {
+        "id": "dataset_row_narrative",
+        "status": "PASS",
+        "inference_time_s": 16.38,
+        "expected": 6,
+        "detected": 6,
+        "true_positives": 6,
+        "false_negatives": 0,
+        "false_positives": 0
+      }
+    ],
+    "total_expected": 31,
+    "total_detected": 28,
+    "true_positives": 25,
+    "false_positives": 3,
+    "false_negatives": 6,
+    "json_parse_failures": 0,
+    "total_inference_time_s": 41.93933629989624,
+    "precision": 0.893,
+    "recall": 0.806,
+    "f1": 0.847,
+    "avg_inference_time_s": 2.62
+  }
+]

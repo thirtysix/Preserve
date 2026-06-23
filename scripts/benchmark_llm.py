@@ -9,11 +9,14 @@ Usage:
     python scripts/benchmark_llm.py
 """
 
+import argparse
 import csv
 import json
 import os
+import subprocess
 import sys
 import time
+import urllib.request
 from pathlib import Path
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -163,25 +166,12 @@ TEST_CASES = [
 N_THREADS = 4  # Keep CPU usage moderate
 
 
-def evaluate_model(model_path: str, model_name: str) -> dict:
-    """Run all test cases against a model and return metrics."""
+def evaluate_model(reviewer, model_name: str, load_time: float) -> dict:
+    """Run all test cases against an already-constructed reviewer and return metrics."""
     print(f"\n{'='*70}")
     print(f"  MODEL: {model_name}")
-    print(f"  Path: {model_path}")
     print(f"{'='*70}")
-
-    # Load model
-    t0 = time.time()
-    reviewer = LLMReviewer(
-        model_path=model_path,
-        n_threads=N_THREADS,
-        use_chat=True,  # Chat mode required — completion mode triggers <think> in Qwen3.5
-        include_examples=True,
-    )
-    # Force model load
-    reviewer._load_model()
-    load_time = time.time() - t0
-    print(f"  Model loaded in {load_time:.1f}s")
+    print(f"  Ready in {load_time:.1f}s")
     print()
 
     results = {
@@ -278,13 +268,51 @@ def evaluate_model(model_path: str, model_name: str) -> dict:
     print(f"    Avg time:   {results['avg_inference_time_s']:.2f}s per region")
     print(f"    Total time: {results['total_inference_time_s']:.1f}s for {len(TEST_CASES)} cases")
     print()
-
-    # Cleanup — release model memory
-    del reviewer
     return results
 
 
+SERVER_BIN = Path(__file__).resolve().parent.parent / "vendor" / "llama.cpp" / "build" / "bin" / "llama-server"
+
+
+def _start_server(model_path: str, port: int, ngl: int) -> subprocess.Popen:
+    """Launch llama-server for one model and wait until it is ready."""
+    proc = subprocess.Popen(
+        [str(SERVER_BIN), "-m", model_path, "-ngl", str(ngl), "-c", "4096",
+         "-t", str(N_THREADS), "--flash-attn", "on", "--reasoning", "off",
+         "--host", "127.0.0.1", "--port", str(port), "--metrics"],
+        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+    )
+    health = f"http://127.0.0.1:{port}/health"
+    for _ in range(180):
+        if proc.poll() is not None:
+            raise RuntimeError("llama-server exited during startup")
+        try:
+            with urllib.request.urlopen(health, timeout=2) as r:
+                if r.status == 200:
+                    return proc
+        except Exception:
+            pass
+        time.sleep(1)
+    proc.terminate()
+    raise RuntimeError("llama-server did not become ready in time")
+
+
+def _stop_server(proc: subprocess.Popen) -> None:
+    proc.terminate()
+    try:
+        proc.wait(timeout=10)
+    except Exception:
+        proc.kill()
+
+
 def main():
+    ap = argparse.ArgumentParser(description="Benchmark local LLM PII reviewer")
+    ap.add_argument("--backend", choices=["embedded", "server"], default="embedded",
+                    help="embedded = llama-cpp-python (CPU); server = native llama-server (GPU-capable)")
+    ap.add_argument("--port", type=int, default=8090, help="port for the server backend")
+    ap.add_argument("--ngl", type=int, default=99, help="GPU layers for server backend (99 = full offload)")
+    args = ap.parse_args()
+
     models_dir = Path(__file__).resolve().parent.parent / "models"
 
     model_files = {
@@ -300,6 +328,12 @@ def main():
         print("Download with: python scripts/download_model.py --model 4B --quant Q4_K_M")
         sys.exit(1)
 
+    if args.backend == "server" and not SERVER_BIN.exists():
+        print(f"ERROR: llama-server not found at {SERVER_BIN}")
+        sys.exit(1)
+
+    backend_desc = f"server (GPU, -ngl {args.ngl})" if args.backend == "server" else "embedded (CPU)"
+    print(f"Backend: {backend_desc}")
     print(f"Found {len(available)} model(s) to benchmark:")
     for name, path in available.items():
         size_mb = path.stat().st_size / 1024 / 1024
@@ -309,7 +343,33 @@ def main():
 
     all_results = []
     for name, path in available.items():
-        result = evaluate_model(str(path), name)
+        if args.backend == "server":
+            t0 = time.time()
+            proc = _start_server(str(path), args.port, args.ngl)
+            load_time = time.time() - t0
+            reviewer = LLMReviewer(
+                backend="server",
+                server_url=f"http://127.0.0.1:{args.port}/v1",
+                use_chat=True,
+                include_examples=True,
+            )
+            try:
+                result = evaluate_model(reviewer, name, load_time)
+            finally:
+                _stop_server(proc)
+        else:
+            t0 = time.time()
+            reviewer = LLMReviewer(
+                backend="embedded",
+                model_path=str(path),
+                n_threads=N_THREADS,
+                use_chat=True,
+                include_examples=True,
+            )
+            reviewer._load_embedded_model()
+            load_time = time.time() - t0
+            result = evaluate_model(reviewer, name, load_time)
+            del reviewer
         all_results.append(result)
 
     # --- Summary comparison ---
@@ -333,8 +393,9 @@ def main():
 
     print()
 
-    # Save results to JSON
-    output_path = Path(__file__).resolve().parent.parent / "tests" / "benchmark_results.json"
+    # Save results to JSON (backend-specific so CPU/GPU runs don't clobber each other)
+    suffix = "_gpu" if args.backend == "server" else ""
+    output_path = Path(__file__).resolve().parent.parent / "tests" / f"benchmark_results{suffix}.json"
     with open(output_path, "w") as f:
         json.dump(all_results, f, indent=2)
     print(f"  Full results saved to: {output_path}")
