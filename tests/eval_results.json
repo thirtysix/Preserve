@@ -1,0 +1,273 @@
+{
+  "clean": {
+    "rows": 100,
+    "per_column": {
+      "full_name": {
+        "recall": 1.0,
+        "total": 100,
+        "detected": 100
+      },
+      "date_of_birth": {
+        "recall": 1.0,
+        "total": 100,
+        "detected": 100
+      },
+      "email": {
+        "recall": 1.0,
+        "total": 100,
+        "detected": 100
+      },
+      "phone": {
+        "recall": 1.0,
+        "total": 100,
+        "detected": 100
+      },
+      "national_id": {
+        "recall": 1.0,
+        "total": 100,
+        "detected": 100
+      },
+      "passport_number": {
+        "recall": 1.0,
+        "total": 100,
+        "detected": 100
+      },
+      "bank_account": {
+        "recall": 1.0,
+        "total": 100,
+        "detected": 100
+      },
+      "credit_card": {
+        "recall": 1.0,
+        "total": 100,
+        "detected": 100
+      },
+      "ip_address": {
+        "recall": 1.0,
+        "total": 100,
+        "detected": 100
+      },
+      "address": {
+        "recall": 0.98,
+        "total": 100,
+        "detected": 98
+      },
+      "emergency_contact_name": {
+        "recall": 1.0,
+        "total": 100,
+        "detected": 100
+      },
+      "emergency_contact_phone": {
+        "recall": 1.0,
+        "total": 100,
+        "detected": 100
+      }
+    },
+    "recall": 0.9983333333333333,
+    "precision": 0.9991980753809142,
+    "f1": 0.9987655171813914,
+    "f2": 0.9985061619814879,
+    "round_trip_ok": 100,
+    "round_trip_total": 100
+  },
+  "messy": {
+    "cases": 23,
+    "tp": 66,
+    "fn": 16,
+    "fp": 12,
+    "recall": 0.8048780487804879,
+    "precision": 0.8461538461538461,
+    "f1": 0.8250000000000001,
+    "f2": 0.812807881773399,
+    "per_tag": {
+      "abbreviations": {
+        "expected": 9,
+        "found": 9,
+        "recall": 1.0
+      },
+      "chat": {
+        "expected": 3,
+        "found": 2,
+        "recall": 0.6666666666666666
+      },
+      "conversational": {
+        "expected": 7,
+        "found": 6,
+        "recall": 0.8571428571428571
+      },
+      "copypaste": {
+        "expected": 8,
+        "found": 7,
+        "recall": 0.875
+      },
+      "dense": {
+        "expected": 7,
+        "found": 6,
+        "recall": 0.8571428571428571
+      },
+      "email_format": {
+        "expected": 3,
+        "found": 3,
+        "recall": 1.0
+      },
+      "email_forward": {
+        "expected": 3,
+        "found": 3,
+        "recall": 1.0
+      },
+      "emoji": {
+        "expected": 3,
+        "found": 2,
+        "recall": 0.6666666666666666
+      },
+      "finnish": {
+        "expected": 19,
+        "found": 18,
+        "recall": 0.9473684210526315
+      },
+      "finnish_english": {
+        "expected": 3,
+        "found": 3,
+        "recall": 1.0
+      },
+      "informal": {
+        "expected": 6,
+        "found": 3,
+        "recall": 0.5
+      },
+      "list": {
+        "expected": 9,
+        "found": 5,
+        "recall": 0.5555555555555556
+      },
+      "medical": {
+        "expected": 3,
+        "found": 3,
+        "recall": 1.0
+      },
+      "medical_shorthand": {
+        "expected": 5,
+        "found": 5,
+        "recall": 1.0
+      },
+      "mexican": {
+        "expected": 5,
+        "found": 4,
+        "recall": 0.8
+      },
+      "mixed_language": {
+        "expected": 7,
+        "found": 6,
+        "recall": 0.8571428571428571
+      },
+      "multinational": {
+        "expected": 9,
+        "found": 5,
+        "recall": 0.5555555555555556
+      },
+      "natural_date": {
+        "expected": 3,
+        "found": 2,
+        "recall": 0.6666666666666666
+      },
+      "no_caps": {
+        "expected": 6,
+        "found": 5,
+        "recall": 0.8333333333333334
+      },
+      "obfuscated": {
+        "expected": 4,
+        "found": 3,
+        "recall": 0.75
+      },
+      "partial": {
+        "expected": 5,
+        "found": 2,
+        "recall": 0.4
+      },
+      "partial_info": {
+        "expected": 3,
+        "found": 1,
+        "recall": 0.3333333333333333
+      },
+      "real_world": {
+        "expected": 5,
+        "found": 5,
+        "recall": 1.0
+      },
+      "redacted": {
+        "expected": 5,
+        "found": 2,
+        "recall": 0.4
+      },
+      "runon": {
+        "expected": 7,
+        "found": 7,
+        "recall": 1.0
+      },
+      "social_media": {
+        "expected": 3,
+        "found": 2,
+        "recall": 0.6666666666666666
+      },
+      "spanish_english": {
+        "expected": 4,
+        "found": 3,
+        "recall": 0.75
+      },
+      "spelled_out": {
+        "expected": 4,
+        "found": 3,
+        "recall": 0.75
+      },
+      "structured": {
+        "expected": 16,
+        "found": 11,
+        "recall": 0.6875
+      },
+      "tabs": {
+        "expected": 5,
+        "found": 4,
+        "recall": 0.8
+      },
+      "typos": {
+        "expected": 6,
+        "found": 6,
+        "recall": 1.0
+      },
+      "workplace": {
+        "expected": 3,
+        "found": 3,
+        "recall": 1.0
+      }
+    }
+  },
+  "layer3": {
+    "models": [
+      {
+        "model": "Qwen3.5-0.8B-Q4_K_M",
+        "precision": 0.457,
+        "recall": 0.516,
+        "f1": 0.485,
+        "f2": 0.503,
+        "avg_time_s": 0.59
+      },
+      {
+        "model": "Qwen3.5-2B-Q4_K_M",
+        "precision": 0.714,
+        "recall": 0.323,
+        "f1": 0.444,
+        "f2": 0.363,
+        "avg_time_s": 0.49
+      },
+      {
+        "model": "Qwen3.5-4B-Q4_K_M",
+        "precision": 0.893,
+        "recall": 0.806,
+        "f1": 0.847,
+        "f2": 0.822,
+        "avg_time_s": 2.62
+      }
+    ]
+  }
+}

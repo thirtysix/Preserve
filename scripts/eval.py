@@ -1,0 +1,300 @@
+#!/usr/bin/env python3
+"""
+Unified evaluation harness for Preserve.
+
+One command produces the numbers the README and docs quote, with both
+precision and recall (not just recall), a recall-weighted F-beta, and a
+per-type / per-tag breakdown. It evaluates:
+
+  1. Clean data  (tests/test_data.csv, 100 rows) in context: per-column recall,
+     overall recall + precision, and reversible round-trip.
+  2. Messy data  (tests/messy_test_data.json, 23 cases): overall recall +
+     precision and a per-tag recall breakdown.
+  3. Layer 3 LLM (read from tests/benchmark_results_gpu.json, or re-run with
+     --with-llm): precision / recall / F1 / F2 per model.
+
+Outputs a console summary, a markdown report (docs/EVALUATION.md), and a
+machine-readable tests/eval_results.json.
+
+Why F-beta with beta=2: for PII scrubbing a miss (false negative) leaks data,
+while a false positive only over-redacts. Recall therefore matters more than
+precision, so we report F2 (recall-weighted) alongside the symmetric F1.
+
+Usage:
+    python scripts/eval.py                 # uses saved Layer-3 results
+    python scripts/eval.py --with-llm      # re-run the GPU Layer-3 benchmark first
+    python scripts/eval.py --no-report     # console only, don't write files
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import sys
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from preserve import Scrubber, PreserveConfig, SensitivityLevel
+
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+TESTS = os.path.join(ROOT, "tests")
+DOCS = os.path.join(ROOT, "docs")
+
+PII_COLUMNS = [
+    "full_name", "date_of_birth", "email", "phone", "national_id",
+    "passport_number", "bank_account", "credit_card", "ip_address",
+    "address", "emergency_contact_name", "emergency_contact_phone",
+]
+
+
+def fbeta(precision: float, recall: float, beta: float) -> float:
+    """F-beta score. beta>1 weights recall higher; beta=1 is the usual F1."""
+    b2 = beta * beta
+    denom = b2 * precision + recall
+    return (1 + b2) * precision * recall / denom if denom > 0 else 0.0
+
+
+def _overlaps(a0, a1, spans) -> bool:
+    return any(a0 < b1 and a1 > b0 for b0, b1 in spans)
+
+
+# --------------------------------------------------------------------------- #
+# 1. Clean data, in context
+# --------------------------------------------------------------------------- #
+def eval_clean() -> dict:
+    import csv
+    with open(os.path.join(TESTS, "test_data.csv"), encoding="utf-8") as f:
+        rows = list(csv.DictReader(f))
+
+    scrubber = Scrubber(PreserveConfig(sensitivity_level=SensitivityLevel.AGGRESSIVE))
+    per_col = {c: {"total": 0, "detected": 0} for c in PII_COLUMNS}
+    det_total = det_hit = 0          # for precision (detections overlapping wanted PII)
+    round_trips_ok = 0
+
+    for row in rows:
+        narrative = (
+            f"Patient: {row['full_name']}, born {row['date_of_birth']}, residing at "
+            f"{row['address']}, {row['region']}, {row['country']}. Email {row['email']}, "
+            f"phone {row['phone']}. National ID: {row['national_id']}. "
+            f"Passport: {row['passport_number']}. Bank IBAN {row['bank_account']}. "
+            f"Card {row['credit_card']}. IP {row['ip_address']}. "
+            f"Emergency contact: {row['emergency_contact_name']} ({row['emergency_contact_phone']})."
+        )
+        result = scrubber.scrub(narrative)
+        spans = [(d.start, d.end) for d in result.detections]
+        if scrubber.restore(result.sanitized_text, result.placeholder_map) == narrative:
+            round_trips_ok += 1
+
+        # Required spans (the 12 PII fields) and "allowed" extras (region/country
+        # are location data we neither require nor penalise).
+        required, allowed = [], []
+        for col in PII_COLUMNS:
+            val = row.get(col, "")
+            if not val or val == "None":
+                continue
+            idx = narrative.find(val)
+            if idx < 0:
+                continue
+            span = (idx, idx + len(val))
+            required.append(span)
+            allowed.append(span)
+            per_col[col]["total"] += 1
+            if _overlaps(span[0], span[1], spans):
+                per_col[col]["detected"] += 1
+        for extra in ("region", "country"):
+            v = row.get(extra, "")
+            if v:
+                i = narrative.find(v)
+                if i >= 0:
+                    allowed.append((i, i + len(v)))
+
+        for (s, e) in spans:
+            det_total += 1
+            if _overlaps(s, e, allowed):
+                det_hit += 1
+
+    td = sum(c["detected"] for c in per_col.values())
+    tt = sum(c["total"] for c in per_col.values())
+    recall = td / tt if tt else 0.0
+    precision = det_hit / det_total if det_total else 0.0
+    return {
+        "rows": len(rows),
+        "per_column": {c: {"recall": (v["detected"] / v["total"] if v["total"] else 0.0),
+                           **v} for c, v in per_col.items()},
+        "recall": recall, "precision": precision,
+        "f1": fbeta(precision, recall, 1), "f2": fbeta(precision, recall, 2),
+        "round_trip_ok": round_trips_ok,
+        "round_trip_total": len(rows),
+    }
+
+
+# --------------------------------------------------------------------------- #
+# 2. Messy data
+# --------------------------------------------------------------------------- #
+def eval_messy() -> dict:
+    with open(os.path.join(TESTS, "messy_test_data.json"), encoding="utf-8") as f:
+        cases = json.load(f)
+
+    scrubber = Scrubber(PreserveConfig(sensitivity_level=SensitivityLevel.AGGRESSIVE))
+    tp = fn = fp = 0
+    per_tag: dict[str, dict] = {}
+
+    for case in cases:
+        text = case["text"]
+        expected = case.get("expected_pii", [])
+        dets = scrubber.scrub(text).detections
+        det_texts = [d.matched_text.lower() for d in dets]
+
+        matched_exp = set()
+        matched_det = set()
+        for i, exp in enumerate(expected):
+            el = exp.lower()
+            for j, dt in enumerate(det_texts):
+                if j in matched_det:
+                    continue
+                if el in dt or dt in el:
+                    matched_exp.add(i)
+                    matched_det.add(j)
+                    break
+
+        c_tp = len(matched_exp)
+        c_fn = len(expected) - c_tp
+        c_fp = len(det_texts) - len(matched_det)
+        tp += c_tp
+        fn += c_fn
+        fp += c_fp
+
+        for tag in case.get("tags", []):
+            t = per_tag.setdefault(tag, {"expected": 0, "found": 0})
+            t["expected"] += len(expected)
+            t["found"] += c_tp
+
+    recall = tp / (tp + fn) if (tp + fn) else 0.0
+    precision = tp / (tp + fp) if (tp + fp) else 0.0
+    return {
+        "cases": len(cases),
+        "tp": tp, "fn": fn, "fp": fp,
+        "recall": recall, "precision": precision,
+        "f1": fbeta(precision, recall, 1), "f2": fbeta(precision, recall, 2),
+        "per_tag": {k: {**v, "recall": (v["found"] / v["expected"] if v["expected"] else 0.0)}
+                    for k, v in sorted(per_tag.items())},
+    }
+
+
+# --------------------------------------------------------------------------- #
+# 3. Layer 3 (from saved GPU benchmark, or re-run)
+# --------------------------------------------------------------------------- #
+def eval_layer3(with_llm: bool) -> dict | None:
+    path = os.path.join(TESTS, "benchmark_results_gpu.json")
+    if with_llm:
+        import subprocess
+        print("Re-running the GPU Layer-3 benchmark (this starts llama-server per model)...")
+        subprocess.run([sys.executable, os.path.join(ROOT, "scripts", "benchmark_llm.py"),
+                        "--backend", "server"], check=True)
+    if not os.path.exists(path):
+        return None
+    with open(path, encoding="utf-8") as f:
+        data = json.load(f)
+    models = []
+    for r in data:
+        p, rec = r.get("precision", 0.0), r.get("recall", 0.0)
+        models.append({
+            "model": r["model"], "precision": p, "recall": rec,
+            "f1": r.get("f1", fbeta(p, rec, 1)), "f2": round(fbeta(p, rec, 2), 3),
+            "avg_time_s": r.get("avg_inference_time_s"),
+        })
+    return {"models": models}
+
+
+# --------------------------------------------------------------------------- #
+# Reporting
+# --------------------------------------------------------------------------- #
+def pct(x: float) -> str:
+    return f"{x * 100:.1f}%"
+
+
+def print_console(clean, messy, l3) -> None:
+    print("\n" + "=" * 64)
+    print("  PRESERVE EVALUATION")
+    print("=" * 64)
+
+    print(f"\nCLEAN (in context, {clean['rows']} rows)  "
+          f"recall {pct(clean['recall'])}  precision {pct(clean['precision'])}  "
+          f"F1 {clean['f1']:.3f}  F2 {clean['f2']:.3f}")
+    print(f"  reversible round-trip: {clean['round_trip_ok']}/{clean['round_trip_total']}")
+    for c, v in clean["per_column"].items():
+        flag = "  " if v["recall"] >= 0.9 else "! "
+        print(f"    {flag}{c:<26s} {v['detected']:>3d}/{v['total']:<3d}  {pct(v['recall'])}")
+
+    print(f"\nMESSY ({messy['cases']} cases)  recall {pct(messy['recall'])}  "
+          f"precision {pct(messy['precision'])}  F1 {messy['f1']:.3f}  F2 {messy['f2']:.3f}")
+    print(f"  TP {messy['tp']}  FN {messy['fn']}  FP {messy['fp']}")
+    for tag, v in messy["per_tag"].items():
+        print(f"    {tag:<22s} {v['found']:>3d}/{v['expected']:<3d}  {pct(v['recall'])}")
+
+    if l3:
+        print("\nLAYER 3 (local LLM, GPU)")
+        print(f"    {'model':<22s} {'P':>7s} {'R':>7s} {'F1':>7s} {'F2':>7s}")
+        for m in l3["models"]:
+            print(f"    {m['model']:<22s} {pct(m['precision']):>7s} {pct(m['recall']):>7s} "
+                  f"{m['f1']:>7.3f} {m['f2']:>7.3f}")
+    print()
+
+
+def write_report(clean, messy, l3) -> None:
+    lines = ["# Evaluation", "",
+             "Generated by `scripts/eval.py`. F2 is recall-weighted (recall matters",
+             "more than precision for PII: a miss leaks data, a false positive only",
+             "over-redacts).", ""]
+
+    lines += ["## Clean data (100 rows, in context)", "",
+              f"Overall recall **{pct(clean['recall'])}**, precision {pct(clean['precision'])}, "
+              f"F1 {clean['f1']:.3f}, F2 {clean['f2']:.3f}. "
+              f"Reversible round-trip: {clean['round_trip_ok']}/{clean['round_trip_total']} rows exact.", "",
+              "| Column | Recall | Found/Total |", "| --- | --- | --- |"]
+    for c, v in clean["per_column"].items():
+        lines.append(f"| {c} | {pct(v['recall'])} | {v['detected']}/{v['total']} |")
+
+    lines += ["", "## Messy data (23 cases)", "",
+              f"Overall recall **{pct(messy['recall'])}**, precision {pct(messy['precision'])}, "
+              f"F1 {messy['f1']:.3f}, F2 {messy['f2']:.3f} "
+              f"(TP {messy['tp']}, FN {messy['fn']}, FP {messy['fp']}).", "",
+              "| Tag | Recall | Found/Expected |", "| --- | --- | --- |"]
+    for tag, v in messy["per_tag"].items():
+        lines.append(f"| {tag} | {pct(v['recall'])} | {v['found']}/{v['expected']} |")
+
+    if l3:
+        lines += ["", "## Layer 3 (local LLM, GPU, current pipeline)", "",
+                  "| Model | Precision | Recall | F1 | F2 |", "| --- | --- | --- | --- | --- |"]
+        for m in l3["models"]:
+            lines.append(f"| {m['model']} | {pct(m['precision'])} | {pct(m['recall'])} | "
+                         f"{m['f1']:.3f} | {m['f2']:.3f} |")
+    lines.append("")
+
+    with open(os.path.join(DOCS, "EVALUATION.md"), "w", encoding="utf-8") as f:
+        f.write("\n".join(lines))
+    with open(os.path.join(TESTS, "eval_results.json"), "w", encoding="utf-8") as f:
+        json.dump({"clean": clean, "messy": messy, "layer3": l3}, f, indent=2)
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser(description="Preserve unified evaluation")
+    ap.add_argument("--with-llm", action="store_true", help="re-run the GPU Layer-3 benchmark first")
+    ap.add_argument("--no-report", action="store_true", help="console only; do not write files")
+    args = ap.parse_args()
+
+    clean = eval_clean()
+    messy = eval_messy()
+    l3 = eval_layer3(args.with_llm)
+
+    print_console(clean, messy, l3)
+    if not args.no_report:
+        write_report(clean, messy, l3)
+        print(f"Wrote {os.path.join('docs', 'EVALUATION.md')} and "
+              f"{os.path.join('tests', 'eval_results.json')}")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
