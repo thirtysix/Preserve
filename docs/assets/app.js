@@ -13,6 +13,13 @@
 
   const SENS_ORDER = ["minimal", "standard", "aggressive"];
 
+  // What each sensitivity level actually applies (shown live under the dropdown).
+  const SENS_DETAIL = {
+    minimal: "Applies regex + checksums + context · structured IDs, cards, IBANs",
+    standard: "Applies regex + checksums + context · + phones, IPs, dates",
+    aggressive: "Applies regex + checksums + context + name gazetteer · + names, addresses",
+  };
+
   // --- Checksum validators (ported from preserve/validators.py) ---
   const onlyDigits = (s) => (s.match(/\d/g) || []).map(Number);
 
@@ -448,6 +455,8 @@
   function run() {
     const text = $("input").value;
     const sensitivity = $("sensitivity").value;
+    const sd = $("sens-detail");
+    if (sd) sd.textContent = SENS_DETAIL[sensitivity] || "";
     const detections = detect(text, sensitivity);
     const { sanitized, summary } = scrub(text, detections);
 

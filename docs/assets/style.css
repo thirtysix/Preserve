@@ -103,13 +103,18 @@ code { background: var(--code-bg); border-radius: 4px; padding: 1px 5px; font-si
 /* ---- Right: working panel ---- */
 .work { display: flex; flex-direction: column; min-width: 0; }
 .controls {
-  display: flex; flex-wrap: wrap; gap: 12px 18px; align-items: center;
+  display: flex; flex-direction: column; gap: 10px;
   margin-bottom: 14px; padding: 12px 14px; background: var(--panel);
   border: 1px solid var(--border); border-radius: 10px; box-shadow: var(--shadow);
 }
+.control-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; }
+.control-row + .control-row { border-top: 1px solid var(--border); padding-top: 10px; }
 .controls label, .examples-label { font-size: 13px; color: var(--muted); margin-right: 6px; }
 .controls .field { display: flex; align-items: center; }
-.examples-wrap { display: flex; align-items: center; gap: 4px; flex: 1; min-width: 0; flex-wrap: wrap; }
+.sens-detail { font-size: 12.5px; color: var(--muted); }
+.examples-row { align-items: flex-start; }
+.examples-row .examples-label { padding-top: 5px; }
+#clear { margin-left: auto; }
 select, button {
   font: inherit; font-size: 13px; padding: 6px 10px; border-radius: 6px;
   border: 1px solid var(--border); background: var(--bg); color: var(--text); cursor: pointer;

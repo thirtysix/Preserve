@@ -19,137 +19,6 @@ A browser-based demo of the **deterministic** detection layer (regex + checksum 
 
 The demo also runs a compact build of the gazetteer name scorer, so it catches bare names across 55 countries. The Python package adds the full name scorer (the complete names-dataset) and the optional local LLM review described below.
 
-## Architecture
-
-```
-Input text
-    │
-Layer 1: NORMALCY SCANNER
-    │   Scores text regions by how "normal" they look
-    ▼
-Layer 2: DETECTION PIPELINE
-    ├── 2a: Regex (49+ patterns, 13+ countries)
-    ├── 2b: Domain parsers (phonenumbers, email-validator, dateparser)
-    ├── 2c: Checksum validation (Luhn, IBAN, HETU, DNI, CPF, BSN, NHS, RRN)
-    ├── 2d: Context-aware confidence scoring
-    ├── 2e: Allow-list filtering
-    ├── 2f: Obfuscation normalization ("[at]"/"[dot]", spelled digits, homoglyphs)
-    ├── 2g: Optional spaCy NER
-    └── 2h: Hybrid name scorer (names-dataset + wordfreq gazetteer)
-    │
-Layer 3: LOCAL LLM REVIEW (optional)
-    │   Qwen3.5-0.8B via llama-server or llama-cpp-python
-    │   Reviews suspicious regions with >>>..<<< markers
-    │   Runs locally; nothing leaves the machine
-    ▼
-Output: sanitized text + reversible placeholder map
-```
-
-The browser demo implements **Layers 2a + 2c + 2d** (regex, checksums, context scoring) plus a compact build of the **2h** name gazetteer, so it catches both titled names ("Dr. Lee", "Patient: Aurora Rossi") and bare names across 55 countries ("Mikko Virtanen", "Hiroshi Tanaka"). Layers 2b/2g, the complete names-dataset, and Layer 3 require the Python package.
-
-## Performance
-
-### Detection rates
-
-Measured **in context** (PII embedded in natural-language prompts, the realistic case),
-Layer 2 only. Reproduce with `python tests/test_against_dataset.py`.
-
-| Dataset | Layer 2 only | Layer 2 + LLM |
-| --- | --- | --- |
-| Clean data (100 rows, 1200 PII items) | **99.8%** | n/a |
-| Messy data (23 cases, 82 PII items) | **87.8%** | ~87% on hardest subset |
-
-All 100 clean rows also round-trip exactly (scrub → restore reproduces the original).
-
-### Per-column detection (clean data, in context, Layer 2)
-
-| Column | Rate | Column | Rate |
-| --- | --- | --- | --- |
-| full_name | 100% | credit_card | 100% |
-| date_of_birth | 100% | ip_address | 100% |
-| email | 100% | address | 98% |
-| phone | 100% | emergency_contact_name | 100% |
-| national_id | 100% | emergency_contact_phone | 100% |
-| passport_number | 100% | bank_account | 100% |
-
-> Detection rates are highest in context. Several patterns (passport, address, names)
-> intentionally require a nearby keyword, so a bare value scrubbed *with no surrounding
-> text* scores lower; the test script reports that isolated-value lower bound too.
-
-### Layer 3 inference speed
-
-Layer 3 model comparison over the 16-case benchmark set (Qwen3.5, Q4_K_M). GPU figures use the native `llama-server` with `-ngl 99` full offload on an RTX 3060 6 GB Laptop GPU (measured 2026-06-21):
-
-| Model | VRAM | CPU avg/case | GPU avg/case | Speedup |
-| --- | --- | --- | --- | --- |
-| Qwen3.5-0.8B | 1.2 GB | 6.87s | **0.56s** | ~12× |
-| Qwen3.5-2B | 2.0 GB | 10.29s | **0.39s** | ~26× |
-| Qwen3.5-4B | 3.6 GB | 24.17s | **1.74s** | ~14× |
-
-All three models fit comfortably in 6 GB VRAM. Full methodology in [`docs/LLM_BENCHMARK.md`](docs/LLM_BENCHMARK.md).
-
-## Quick Start
-
-```bash
-python -m venv .venv && source .venv/bin/activate
-pip install -e .
-cp .env.example .env  # Add your DEEPINFRA_API_KEY
-```
-
-```python
-from preserve import create_client, SensitivityLevel
-
-client = create_client(
-    api_key="your-api-key",
-    model="meta-llama/Llama-3.3-70B-Instruct",
-    sensitivity_level=SensitivityLevel.STANDARD,
-)
-
-response = client.chat([
-    {"role": "user", "content": "Patient John Smith (john@hospital.com, SSN 123-45-6789) needs a follow-up plan."}
-])
-
-print(response.text)  # PII scrubbed before sending, restored in response
-```
-
-## Scrub and Restore
-
-Every redaction is reversible. `scrub()` returns a `placeholder_map` that maps each
-placeholder back to its original value, so you can restore the real data locally: either
-the original text or, more usefully, a model's **response** that still contains placeholders.
-
-```python
-from preserve import Scrubber, PreserveConfig, SensitivityLevel
-
-config = PreserveConfig(
-    sensitivity_level=SensitivityLevel.AGGRESSIVE,
-    use_name_scorer=True,      # Hybrid name detection (names-dataset + wordfreq)
-)
-scrubber = Scrubber(config)
-
-result = scrubber.scrub("Patient aurora rossi, SSN 123-45-6789, at Via Roma 31")
-
-print(result.sanitized_text)        # "Patient [NAME_1], SSN [SSN_1], at [ADDRESS_1]"
-print(result.pii_summary)           # {'NAME': 1, 'SSN': 1, 'ADDRESS': 1}
-
-# Inspect the reversible mapping (placeholder -> original value)
-print(result.placeholder_map.entries())
-# {'[NAME_1]': 'aurora rossi', '[SSN_1]': '123-45-6789', '[ADDRESS_1]': 'Via Roma 31'}
-
-# Restore the original text exactly
-restored = scrubber.restore(result.sanitized_text, result.placeholder_map)
-assert restored == result.original_text
-
-# In practice you send `sanitized_text` to the LLM and restore its *response*,
-# which comes back referencing the same placeholders:
-model_response = "Schedule a follow-up for [NAME_1]; verify [SSN_1] on file."
-print(scrubber.restore(model_response, result.placeholder_map))
-# "Schedule a follow-up for aurora rossi; verify 123-45-6789 on file."
-```
-
-The mapping also serializes (`placeholder_map.to_dict()` / `PlaceholderMap.from_dict(...)`),
-so the scrub and restore steps can happen in different processes, which is useful for the API setup below.
-
 ## Workflows
 
 A few common ways to put Preserve to work. In every case the raw PII stays on the local
@@ -245,6 +114,147 @@ done
 For many (often non-technical) users, run the [API gateway](#api-gateway-central-deployment)
 below: everyone points their existing OpenAI client at one URL, PII never reaches the upstream
 provider, and no per-user code changes are needed.
+
+## Architecture
+
+```
+Input text
+    │
+Layer 1: NORMALCY SCANNER
+    │   Scores text regions by how "normal" they look
+    ▼
+Layer 2: DETECTION PIPELINE
+    ├── 2a: Regex (49+ patterns, 13+ countries)
+    ├── 2b: Domain parsers (phonenumbers, email-validator, dateparser)
+    ├── 2c: Checksum validation (Luhn, IBAN, HETU, DNI, CPF, BSN, NHS, RRN)
+    ├── 2d: Context-aware confidence scoring
+    ├── 2e: Allow-list filtering
+    ├── 2f: Obfuscation normalization ("[at]"/"[dot]", spelled digits, homoglyphs)
+    ├── 2g: Optional spaCy NER
+    └── 2h: Hybrid name scorer (names-dataset + wordfreq gazetteer)
+    │
+Layer 3: LOCAL LLM REVIEW (optional)
+    │   Qwen3.5-0.8B via llama-server or llama-cpp-python
+    │   Reviews suspicious regions with >>>..<<< markers
+    │   Runs locally; nothing leaves the machine
+    ▼
+Output: sanitized text + reversible placeholder map
+```
+
+The browser demo implements **Layers 2a + 2c + 2d** (regex, checksums, context scoring) plus a compact build of the **2h** name gazetteer, so it catches both titled names ("Dr. Lee", "Patient: Aurora Rossi") and bare names across 55 countries ("Mikko Virtanen", "Hiroshi Tanaka"). Layers 2b/2g, the complete names-dataset, and Layer 3 require the Python package.
+
+## Performance
+
+### Detection rates
+
+Measured **in context** (PII embedded in natural-language prompts, the realistic case).
+Reproduce Layer 2 with `python tests/test_against_dataset.py`; the LLM figures are from
+[`docs/LLM_BENCHMARK.md`](docs/LLM_BENCHMARK.md).
+
+| Dataset | Layer 2 only | Layer 2 + LLM |
+| --- | --- | --- |
+| Clean data (100 rows, 1200 PII items) | **99.8%** | n/a (no headroom left) |
+| Messy data (23 cases, 82 PII items) | **87.8%** | see hardest subset below |
+| Hardest messy subset (10 cases) | ~75% | **86.8%** |
+
+The LLM's job is the long tail, not the easy cases. On clean, well-structured data Layer 2
+alone already reaches 99.8%, so the LLM has essentially nothing to add there (hence `n/a`).
+Its value shows on the hardest messy cases, where it lifts recall from ~75% to 86.8% by
+catching things deterministic rules miss: the bare name "john smith" (both words too common
+for the gazetteer), "via roma" (an address with no number), the custom ID "MEX-2345-6789",
+and "april 5th" (a natural-language date with no year). It stays quiet when Layer 2 already
+has a region covered (it fired on only 4 of those 10 cases).
+
+All 100 clean rows also round-trip exactly (scrub → restore reproduces the original).
+
+### Per-column detection (clean data, in context, Layer 2)
+
+| Column | Rate | Column | Rate |
+| --- | --- | --- | --- |
+| full_name | 100% | credit_card | 100% |
+| date_of_birth | 100% | ip_address | 100% |
+| email | 100% | address | 98% |
+| phone | 100% | emergency_contact_name | 100% |
+| national_id | 100% | emergency_contact_phone | 100% |
+| passport_number | 100% | bank_account | 100% |
+
+> Detection rates are highest in context. Several patterns (passport, address, names)
+> intentionally require a nearby keyword, so a bare value scrubbed *with no surrounding
+> text* scores lower; the test script reports that isolated-value lower bound too.
+
+### Layer 3 inference speed
+
+Layer 3 model comparison over the 16-case benchmark set (Qwen3.5, Q4_K_M). GPU figures use the native `llama-server` with `-ngl 99` full offload on an RTX 3060 6 GB Laptop GPU (measured 2026-06-21):
+
+| Model | VRAM | CPU avg/case | GPU avg/case | Speedup |
+| --- | --- | --- | --- | --- |
+| Qwen3.5-0.8B | 1.2 GB | 6.87s | **0.56s** | ~12× |
+| Qwen3.5-2B | 2.0 GB | 10.29s | **0.39s** | ~26× |
+| Qwen3.5-4B | 3.6 GB | 24.17s | **1.74s** | ~14× |
+
+All three models fit comfortably in 6 GB VRAM. Full methodology in [`docs/LLM_BENCHMARK.md`](docs/LLM_BENCHMARK.md).
+
+## Quick Start
+
+```bash
+python -m venv .venv && source .venv/bin/activate
+pip install -e .
+cp .env.example .env  # Add your DEEPINFRA_API_KEY
+```
+
+```python
+from preserve import create_client, SensitivityLevel
+
+client = create_client(
+    api_key="your-api-key",
+    model="meta-llama/Llama-3.3-70B-Instruct",
+    sensitivity_level=SensitivityLevel.STANDARD,
+)
+
+response = client.chat([
+    {"role": "user", "content": "Patient John Smith (john@hospital.com, SSN 123-45-6789) needs a follow-up plan."}
+])
+
+print(response.text)  # PII scrubbed before sending, restored in response
+```
+
+## Scrub and Restore
+
+Every redaction is reversible. `scrub()` returns a `placeholder_map` that maps each
+placeholder back to its original value, so you can restore the real data locally: either
+the original text or, more usefully, a model's **response** that still contains placeholders.
+
+```python
+from preserve import Scrubber, PreserveConfig, SensitivityLevel
+
+config = PreserveConfig(
+    sensitivity_level=SensitivityLevel.AGGRESSIVE,
+    use_name_scorer=True,      # Hybrid name detection (names-dataset + wordfreq)
+)
+scrubber = Scrubber(config)
+
+result = scrubber.scrub("Patient aurora rossi, SSN 123-45-6789, at Via Roma 31")
+
+print(result.sanitized_text)        # "Patient [NAME_1], SSN [SSN_1], at [ADDRESS_1]"
+print(result.pii_summary)           # {'NAME': 1, 'SSN': 1, 'ADDRESS': 1}
+
+# Inspect the reversible mapping (placeholder -> original value)
+print(result.placeholder_map.entries())
+# {'[NAME_1]': 'aurora rossi', '[SSN_1]': '123-45-6789', '[ADDRESS_1]': 'Via Roma 31'}
+
+# Restore the original text exactly
+restored = scrubber.restore(result.sanitized_text, result.placeholder_map)
+assert restored == result.original_text
+
+# In practice you send `sanitized_text` to the LLM and restore its *response*,
+# which comes back referencing the same placeholders:
+model_response = "Schedule a follow-up for [NAME_1]; verify [SSN_1] on file."
+print(scrubber.restore(model_response, result.placeholder_map))
+# "Schedule a follow-up for aurora rossi; verify 123-45-6789 on file."
+```
+
+The mapping also serializes (`placeholder_map.to_dict()` / `PlaceholderMap.from_dict(...)`),
+so the scrub and restore steps can happen in different processes, which is useful for the API setup below.
 
 ## API Gateway (central deployment)
 

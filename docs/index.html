@@ -86,19 +86,22 @@
     <!-- RIGHT: working panel (~2/3) -->
     <section class="work">
       <div class="controls">
-        <div class="field">
-          <label for="sensitivity">Sensitivity</label>
-          <select id="sensitivity">
-            <option value="minimal">Minimal (structured PII only)</option>
-            <option value="standard" selected>Standard (+ phones, IPs, dates)</option>
-            <option value="aggressive">Aggressive (+ names, addresses)</option>
-          </select>
+        <div class="control-row">
+          <div class="field">
+            <label for="sensitivity">Sensitivity</label>
+            <select id="sensitivity">
+              <option value="minimal">Minimal</option>
+              <option value="standard" selected>Standard</option>
+              <option value="aggressive">Aggressive</option>
+            </select>
+          </div>
+          <span class="sens-detail" id="sens-detail"></span>
+          <button id="clear">Clear</button>
         </div>
-        <div class="examples-wrap">
+        <div class="control-row examples-row">
           <span class="examples-label">Examples</span>
           <div class="examples" id="examples"></div>
         </div>
-        <button id="clear">Clear</button>
       </div>
 
       <label class="io-label" for="input">Input</label>
