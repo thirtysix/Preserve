@@ -25,7 +25,7 @@ counted as a false positive. Scoring is character-span overlap.
 | standard | 58.5% | 88.8% | 0.706 | 0.628 |
 | aggressive | 66.8% | 89.5% | 0.765 | 0.703 |
 | aggressive, no name-scorer | 49.6% | 92.0% | 0.644 | 0.546 |
-| aggressive + NER (spaCy) | **85.8%** | 81.5% | **0.836** | **0.849** |
+| aggressive + NER (spaCy, default labels) | **82.4%** | 88.5% | **0.853** | **0.835** |
 
 Per-category recall (aggressive):
 
@@ -42,13 +42,30 @@ Per-category recall (aggressive):
 | ACCOUNT | 54.5% | 18/33 |
 | IP | 51.7% | 45/87 |
 
+## NER label tuning (n=400)
+
+spaCy NER's value depends heavily on which entity labels you accept. Sweeping the label set
+(`ner_labels`) shows `ORG` is the precision killer, while `PERSON` is a free win:
+
+| NER labels | Recall | Precision | F1 | F2 |
+| --- | --- | --- | --- | --- |
+| none (baseline) | 67.6% | 89.7% | 0.771 | 0.711 |
+| PERSON | 75.2% | 89.8% | 0.819 | 0.777 |
+| PERSON + GPE + FAC + DATE (default) | **82.8%** | 88.5% | **0.856** | 0.839 |
+| all (+ ORG) | 86.2% | 81.1% | 0.836 | 0.851 |
+
+So the default `ner_labels = ["PERSON", "GPE", "FAC", "DATE"]` captures almost all of NER's
+recall gain at near-baseline precision; adding `ORG` buys ~3 more points of recall but costs
+~8 points of precision and lowers F1, so it is excluded by default.
+
 ## Takeaways
 
 - **The gazetteer name scorer (Layer 2h) adds about 17 points of recall** (aggressive 66.8%
   vs 49.6% with it disabled).
-- **spaCy NER is a strong recall lever on real-distribution text**: +19 points (66.8% to
-  85.8%) and the best F1/F2, at a precision cost. It is off by default; enable
-  `use_ner=True` when recall matters more than over-redaction.
+- **spaCy NER (tuned) is a strong, cheap recall lever on real-distribution text**: +15 points
+  (66.8% to 82.4%) for ~1 point of precision, and the best config by F1. It is off by default
+  (spaCy is an optional extra); enable `use_ner=True` when recall matters more than
+  over-redaction.
 - Headline recall is lower than the 99.8% on the bundled clean set because this corpus is
   harder and less keyword-rich. That is the point of an external corpus: a more honest,
   harder test.
