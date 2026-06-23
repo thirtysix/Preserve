@@ -148,14 +148,20 @@ The browser demo implements **Layers 2a + 2c + 2d** (regex, checksums, context s
 ### Detection rates
 
 Measured **in context** (PII embedded in natural-language prompts, the realistic case).
-Reproduce Layer 2 with `python tests/test_against_dataset.py`; the LLM figures are from
+Reproduce everything with `python scripts/eval.py` (full breakdown in
+[`docs/EVALUATION.md`](docs/EVALUATION.md)); the LLM figures are from
 [`docs/LLM_BENCHMARK.md`](docs/LLM_BENCHMARK.md).
 
-| Dataset | Layer 2 only | Layer 2 + LLM |
+| Dataset | Layer 2 only (recall / precision) | Layer 2 + LLM |
 | --- | --- | --- |
-| Clean data (100 rows, 1200 PII items) | **99.8%** | n/a (no headroom left) |
-| Messy data (23 cases, 82 PII items) | **87.8%** | see hardest subset below |
+| Clean data (100 rows, 1200 PII items) | **99.8%** / 99.9% | n/a (no headroom left) |
+| Messy data (23 cases, 82 PII items) | **80.5% to 90.2%** / 84.6% to 90.2% | see hardest subset below |
 | Hardest messy subset (10 cases) | ~75% | **86.8%** |
+
+The messy figure is a range on purpose: the low end is a **strict** score (a partial or
+boundary detection counts as a miss, since a partial redaction is a partial leak) and the
+high end is an **overlap** score (any character overlap counts). Same detector, two
+yardsticks, reported together so the number doesn't appear to drift. See `docs/EVALUATION.md`.
 
 The LLM's job is the long tail, not the easy cases. On clean, well-structured data Layer 2
 alone already reaches 99.8%, so the LLM has essentially nothing to add there (hence `n/a`).
