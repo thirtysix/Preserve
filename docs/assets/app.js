@@ -413,7 +413,8 @@
     for (const d of ordered) {
       if (d.start < cursor) continue;
       html += esc(text.slice(cursor, d.start));
-      const cls = d.layer === "name" ? ' class="m-name"' : "";
+      const cls = d.layer === "name" ? ' class="m-name"'
+                : d.layer === "llm" ? ' class="m-llm"' : "";
       html += `<mark${cls} title="${esc(d.type)} (${d.layer})">${esc(text.slice(d.start, d.end))}</mark>`;
       cursor = d.end;
     }
@@ -449,6 +450,47 @@
       </tr></thead><tbody>${rows}</tbody></table>`;
   }
 
+  // --- Layer 3 preview: what the local LLM catches beyond the deterministic layers ---
+  // The browser can't run the model, so these deltas are precomputed offline
+  // (scripts/compute_llm_extra.py) and keyed by the exact built-in example text.
+  const LLM_EXTRA = window.PRESERVE_LLM_EXTRA || {};
+
+  function lookupLlmExtra(text) {
+    for (const [name, val] of Object.entries(window.PRESERVE_EXAMPLES || {})) {
+      if (val === text) return LLM_EXTRA[name] || [];
+    }
+    return null; // not a built-in example
+  }
+
+  function renderLlmPanel(text, detections) {
+    const meta = document.getElementById("llm-meta");
+    const note = document.getElementById("llm-note");
+    const hl = document.getElementById("llm-highlight");
+    const chips = document.getElementById("llm-extra");
+    if (!meta) return;
+
+    const extra = lookupLlmExtra(text);
+    if (extra === null) {
+      meta.textContent = "";
+      hl.innerHTML = "";
+      chips.innerHTML = "";
+      note.textContent = "Load a built-in example above to preview Layer 3 (the browser can't run the model).";
+      return;
+    }
+
+    const merged = detections.concat(
+      extra.map((e) => ({ ...e, pattern: "llm", layer: "llm", confidence: 0.9 }))
+    );
+    hl.innerHTML = highlight(text, merged);
+    chips.innerHTML = extra.length
+      ? extra.map((e) => `<span class="chip chip-llm">${esc(e.type)}: ${esc(e.value)}</span>`).join("")
+      : "";
+    meta.textContent = `Deterministic: ${detections.length} · local LLM adds: ${extra.length}`;
+    note.textContent = extra.length
+      ? "Precomputed with a local Qwen3.5 model. The browser runs no model and sends no data."
+      : "Layer 3 adds nothing here: the deterministic layers already caught everything.";
+  }
+
   // --- Wire up ---
   const $ = (id) => document.getElementById(id);
 
@@ -470,6 +512,7 @@
     $("stat").textContent =
       `${detections.length} item(s) detected · ${text.length} chars · ${PATTERNS.length} patterns active at "${sensitivity}"${nameNote}`;
     $("table").innerHTML = renderTable(detections);
+    renderLlmPanel(text, detections);
   }
 
   function loadExample(name) {

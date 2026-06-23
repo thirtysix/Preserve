@@ -30,6 +30,12 @@ window.PRESERVE_EXAMPLES = {
     "Please cc João Silva and Giulia Romano, then follow up with Carlos Hernandez " +
     "about the Yilmaz contract. Andrzej Kowalski signs off Friday."
   ),
+  "Bare name (rules miss it)": (
+    "Email the report to the new hire, Bob, before Friday."
+  ),
+  "Custom ID (rules miss it)": (
+    "Quote your case reference MEX-2345-6789 when you call back."
+  ),
   "Safe text: no PII": (
     "The algorithm processes data in parallel using 8 threads across the CPU cores. " +
     "Version 4.2 includes improved performance metrics and better error handling."

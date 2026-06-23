@@ -37,20 +37,17 @@
   <main class="app">
     <!-- LEFT: explanatory boxes (~1/3) -->
     <aside class="sidebar">
-      <section class="box">
-        <h2>What this does</h2>
-        <p>
-          Detects and scrubs personally identifiable information from text, then maps every
-          redaction to a reversible placeholder like <code>[EMAIL_1]</code>. Type or paste on
-          the right and watch detection happen live.
-        </p>
-      </section>
-
       <section class="box box-private">
-        <h2><span class="lock" aria-hidden="true">&#128274;</span> Fully private</h2>
+        <h2><span class="lock" aria-hidden="true">&#128274;</span> A live, private demo</h2>
+        <p>
+          A hands-on demo of what the <strong>Preserve</strong> library and API do: detect and
+          scrub personally identifiable information into reversible placeholders like
+          <code>[EMAIL_1]</code>, using the same detectors. Type or paste on the right and
+          watch it work.
+        </p>
         <p>
           <strong>Your text never leaves this browser.</strong> No network requests, no server,
-          no logging. Everything runs in client-side JavaScript on your device.
+          no logging; everything runs in client-side JavaScript on your device.
           <span class="muted">(Open the network tab and watch: nothing is sent.)</span>
         </p>
       </section>
@@ -58,18 +55,26 @@
       <section class="box">
         <h2>How detection works</h2>
         <ul class="layers">
-          <li><span class="lyr">2a</span> <strong>53 regex patterns</strong> across 15+ countries</li>
-          <li><span class="lyr">2c</span> <strong>9 checksum validators</strong> (Luhn, IBAN, CPF, DNI/NIE, BSN, NHS, HETU, RRN)</li>
-          <li><span class="lyr">2d</span> <strong>context scoring</strong> to weight confidence</li>
-          <li><span class="lyr lyr-name">2h</span> <strong>name gazetteer</strong> catching bare names across 55 countries</li>
+          <li><span class="lyr lyr-1">1</span> <strong>Normalcy scanner</strong> flags regions that look unusual, to focus the search <span class="l-tag l-lib">library</span></li>
+          <li><span class="lyr">2a</span> <strong>53 regex patterns</strong> across 15+ countries <span class="l-tag l-live">live</span></li>
+          <li><span class="lyr">2c</span> <strong>9 checksum validators</strong> (Luhn, IBAN, CPF, DNI/NIE, BSN, NHS, HETU, RRN) <span class="l-tag l-live">live</span></li>
+          <li><span class="lyr">2d</span> <strong>context scoring</strong> weights each match's confidence <span class="l-tag l-live">live</span></li>
+          <li><span class="lyr lyr-name">2h</span> <strong>name gazetteer</strong>, bare names across 55 countries <span class="l-tag l-live">live</span></li>
         </ul>
-        <p class="muted">
-          The full Python package adds an optional local LLM (Layer 3) for the very hardest
-          cases. Everything else above runs right here.
+        <div class="layer-sep"></div>
+        <ul class="layers">
+          <li><span class="lyr lyr-llm">3</span> <strong>Local LLM review</strong> reads leftover free text for PII the rules miss <span class="l-tag l-pre">precomputed</span></li>
+        </ul>
+        <p class="muted small">
+          Layers 2a to 2h run <strong>live</strong> in your browser. Layer 1 (normalcy) and
+          Layer 3 (LLM) belong to the full Python library; the browser can't run a model, so the
+          Layer 3 panel shows results <strong>precomputed</strong> by the real pipeline on the
+          built-in examples.
         </p>
         <div class="legend">
           <span><span class="sw sw-regex"></span> regex / checksum</span>
           <span><span class="sw sw-name"></span> name scorer</span>
+          <span><span class="sw sw-llm"></span> local LLM</span>
         </div>
       </section>
 
@@ -118,6 +123,18 @@
         </div>
       </div>
 
+      <section class="llm-panel">
+        <div class="llm-head">
+          <h3>With a local LLM (Layer 3)</h3>
+          <span class="llm-meta" id="llm-meta"></span>
+        </div>
+        <div class="card">
+          <div class="body" id="llm-highlight"></div>
+        </div>
+        <div class="summary" id="llm-extra"></div>
+        <p class="muted llm-note" id="llm-note"></p>
+      </section>
+
       <div class="summary" id="summary"></div>
       <div class="stat" id="stat"></div>
       <div id="table"></div>
@@ -133,6 +150,7 @@
   <script src="assets/patterns.js"></script>
   <script src="assets/context.js"></script>
   <script src="assets/names.js"></script>
+  <script src="assets/llm_extra.js"></script>
   <script src="assets/examples.js"></script>
   <script src="assets/app.js"></script>
 </body>
