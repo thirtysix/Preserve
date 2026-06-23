@@ -1,6 +1,7 @@
 // Precomputed by scripts/compute_llm_extra.py with a local Qwen3.5 model.
 // Per example: PII the local LLM (Layer 3) catches that the demo's
 // deterministic layers miss. Reviewed by hand; the browser can't run the model.
+window.PRESERVE_LLM_MODEL = "Qwen3.5-4B (Q4_K_M)";
 window.PRESERVE_LLM_EXTRA = {
   "Patient record": [],
   "Checksums (valid/invalid)": [],

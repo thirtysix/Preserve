@@ -103,8 +103,13 @@ def main() -> int:
         "// Per example: PII the local LLM (Layer 3) catches that the demo's\n"
         "// deterministic layers miss. Reviewed by hand; the browser can't run the model.\n"
     )
+    # A friendly model label for the demo, e.g. "Qwen3.5-4B (Q4_K_M)".
+    stem = os.path.splitext(os.path.basename(MODEL))[0]
+    label = stem.replace("-Q4_K_M", " (Q4_K_M)").replace("-Q8_0", " (Q8_0)")
+
     with open(OUT, "w", encoding="utf-8") as fh:
         fh.write(header)
+        fh.write(f"window.PRESERVE_LLM_MODEL = {json.dumps(label)};\n")
         fh.write("window.PRESERVE_LLM_EXTRA = ")
         fh.write(body)
         fh.write(";\n")

@@ -486,8 +486,9 @@
       ? extra.map((e) => `<span class="chip chip-llm">${esc(e.type)}: ${esc(e.value)}</span>`).join("")
       : "";
     meta.textContent = `Deterministic: ${detections.length} · local LLM adds: ${extra.length}`;
+    const model = window.PRESERVE_LLM_MODEL || "Qwen3.5";
     note.textContent = extra.length
-      ? "Precomputed with a local Qwen3.5 model. The browser runs no model and sends no data."
+      ? `Precomputed offline with a local ${model} model. The browser runs no model and sends no data.`
       : "Layer 3 adds nothing here: the deterministic layers already caught everything.";
   }
 
