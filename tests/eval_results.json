@@ -72,13 +72,24 @@
   },
   "messy": {
     "cases": 23,
-    "tp": 66,
-    "fn": 16,
-    "fp": 12,
-    "recall": 0.8048780487804879,
-    "precision": 0.8461538461538461,
-    "f1": 0.8250000000000001,
-    "f2": 0.812807881773399,
+    "overlap": {
+      "tp": 74,
+      "fn": 8,
+      "fp": 8,
+      "recall": 0.9024390243902439,
+      "precision": 0.9024390243902439,
+      "f1": 0.9024390243902439,
+      "f2": 0.9024390243902438
+    },
+    "strict": {
+      "tp": 66,
+      "fn": 16,
+      "fp": 12,
+      "recall": 0.8048780487804879,
+      "precision": 0.8461538461538461,
+      "f1": 0.8250000000000001,
+      "f2": 0.812807881773399
+    },
     "per_tag": {
       "abbreviations": {
         "expected": 9,
@@ -97,13 +108,13 @@
       },
       "copypaste": {
         "expected": 8,
-        "found": 7,
-        "recall": 0.875
+        "found": 8,
+        "recall": 1.0
       },
       "dense": {
         "expected": 7,
-        "found": 6,
-        "recall": 0.8571428571428571
+        "found": 7,
+        "recall": 1.0
       },
       "email_format": {
         "expected": 3,
@@ -122,8 +133,8 @@
       },
       "finnish": {
         "expected": 19,
-        "found": 18,
-        "recall": 0.9473684210526315
+        "found": 19,
+        "recall": 1.0
       },
       "finnish_english": {
         "expected": 3,
@@ -137,8 +148,8 @@
       },
       "list": {
         "expected": 9,
-        "found": 5,
-        "recall": 0.5555555555555556
+        "found": 8,
+        "recall": 0.8888888888888888
       },
       "medical": {
         "expected": 3,
@@ -152,8 +163,8 @@
       },
       "mexican": {
         "expected": 5,
-        "found": 4,
-        "recall": 0.8
+        "found": 5,
+        "recall": 1.0
       },
       "mixed_language": {
         "expected": 7,
@@ -162,28 +173,28 @@
       },
       "multinational": {
         "expected": 9,
-        "found": 5,
-        "recall": 0.5555555555555556
+        "found": 8,
+        "recall": 0.8888888888888888
       },
       "natural_date": {
         "expected": 3,
-        "found": 2,
-        "recall": 0.6666666666666666
+        "found": 3,
+        "recall": 1.0
       },
       "no_caps": {
         "expected": 6,
-        "found": 5,
-        "recall": 0.8333333333333334
+        "found": 6,
+        "recall": 1.0
       },
       "obfuscated": {
         "expected": 4,
-        "found": 3,
-        "recall": 0.75
+        "found": 4,
+        "recall": 1.0
       },
       "partial": {
         "expected": 5,
-        "found": 2,
-        "recall": 0.4
+        "found": 3,
+        "recall": 0.6
       },
       "partial_info": {
         "expected": 3,
@@ -197,8 +208,8 @@
       },
       "redacted": {
         "expected": 5,
-        "found": 2,
-        "recall": 0.4
+        "found": 3,
+        "recall": 0.6
       },
       "runon": {
         "expected": 7,
@@ -217,18 +228,18 @@
       },
       "spelled_out": {
         "expected": 4,
-        "found": 3,
-        "recall": 0.75
+        "found": 4,
+        "recall": 1.0
       },
       "structured": {
         "expected": 16,
-        "found": 11,
-        "recall": 0.6875
+        "found": 15,
+        "recall": 0.9375
       },
       "tabs": {
         "expected": 5,
-        "found": 4,
-        "recall": 0.8
+        "found": 5,
+        "recall": 1.0
       },
       "typos": {
         "expected": 6,

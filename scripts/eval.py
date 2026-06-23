@@ -137,46 +137,69 @@ def eval_messy() -> dict:
         cases = json.load(f)
 
     scrubber = Scrubber(PreserveConfig(sensitivity_level=SensitivityLevel.AGGRESSIVE))
-    tp = fn = fp = 0
+    # Two yardsticks, reported together so the number never appears to "move":
+    #   overlap = any character overlap counts as a hit (lenient ceiling; credits
+    #             partial/boundary detections). Matches the clean eval's rule.
+    #   strict  = exact one-to-one substring match (conservative floor; a
+    #             partial/boundary hit is a partial leak, so it counts as a miss).
+    ov = {"tp": 0, "fn": 0, "fp": 0}
+    st = {"tp": 0, "fn": 0, "fp": 0}
     per_tag: dict[str, dict] = {}
 
     for case in cases:
         text = case["text"]
+        low = text.lower()
         expected = case.get("expected_pii", [])
         dets = scrubber.scrub(text).detections
+        spans = [(d.start, d.end) for d in dets]
         det_texts = [d.matched_text.lower() for d in dets]
 
-        matched_exp = set()
+        # --- overlap ---
+        exp_spans, c_tp_ov = [], 0
+        for exp in expected:
+            i = low.find(exp.lower())
+            if i >= 0:
+                es = (i, i + len(exp))
+                exp_spans.append(es)
+                if _overlaps(es[0], es[1], spans):
+                    c_tp_ov += 1
+            elif any(exp.lower() in dt or dt in exp.lower() for dt in det_texts):
+                c_tp_ov += 1
+        ov["tp"] += c_tp_ov
+        ov["fn"] += len(expected) - c_tp_ov
+        ov["fp"] += sum(1 for s, e in spans if not _overlaps(s, e, exp_spans))
+
+        # --- strict (one-to-one substring) ---
         matched_det = set()
-        for i, exp in enumerate(expected):
+        c_tp_st = 0
+        for exp in expected:
             el = exp.lower()
             for j, dt in enumerate(det_texts):
                 if j in matched_det:
                     continue
                 if el in dt or dt in el:
-                    matched_exp.add(i)
                     matched_det.add(j)
+                    c_tp_st += 1
                     break
-
-        c_tp = len(matched_exp)
-        c_fn = len(expected) - c_tp
-        c_fp = len(det_texts) - len(matched_det)
-        tp += c_tp
-        fn += c_fn
-        fp += c_fp
+        st["tp"] += c_tp_st
+        st["fn"] += len(expected) - c_tp_st
+        st["fp"] += len(det_texts) - len(matched_det)
 
         for tag in case.get("tags", []):
             t = per_tag.setdefault(tag, {"expected": 0, "found": 0})
             t["expected"] += len(expected)
-            t["found"] += c_tp
+            t["found"] += c_tp_ov
 
-    recall = tp / (tp + fn) if (tp + fn) else 0.0
-    precision = tp / (tp + fp) if (tp + fp) else 0.0
+    def metrics(d):
+        r = d["tp"] / (d["tp"] + d["fn"]) if (d["tp"] + d["fn"]) else 0.0
+        p = d["tp"] / (d["tp"] + d["fp"]) if (d["tp"] + d["fp"]) else 0.0
+        return {**d, "recall": r, "precision": p,
+                "f1": fbeta(p, r, 1), "f2": fbeta(p, r, 2)}
+
     return {
         "cases": len(cases),
-        "tp": tp, "fn": fn, "fp": fp,
-        "recall": recall, "precision": precision,
-        "f1": fbeta(precision, recall, 1), "f2": fbeta(precision, recall, 2),
+        "overlap": metrics(ov),
+        "strict": metrics(st),
         "per_tag": {k: {**v, "recall": (v["found"] / v["expected"] if v["expected"] else 0.0)}
                     for k, v in sorted(per_tag.items())},
     }
@@ -227,9 +250,12 @@ def print_console(clean, messy, l3) -> None:
         flag = "  " if v["recall"] >= 0.9 else "! "
         print(f"    {flag}{c:<26s} {v['detected']:>3d}/{v['total']:<3d}  {pct(v['recall'])}")
 
-    print(f"\nMESSY ({messy['cases']} cases)  recall {pct(messy['recall'])}  "
-          f"precision {pct(messy['precision'])}  F1 {messy['f1']:.3f}  F2 {messy['f2']:.3f}")
-    print(f"  TP {messy['tp']}  FN {messy['fn']}  FP {messy['fp']}")
+    ov, st = messy["overlap"], messy["strict"]
+    print(f"\nMESSY ({messy['cases']} cases) -- two yardsticks, same detector:")
+    print(f"  overlap (partial hit counts): recall {pct(ov['recall'])}  precision {pct(ov['precision'])}  "
+          f"F2 {ov['f2']:.3f}  (TP {ov['tp']} FN {ov['fn']} FP {ov['fp']})")
+    print(f"  strict  (exact, partial=miss): recall {pct(st['recall'])}  precision {pct(st['precision'])}  "
+          f"F2 {st['f2']:.3f}  (TP {st['tp']} FN {st['fn']} FP {st['fp']})")
     for tag, v in messy["per_tag"].items():
         print(f"    {tag:<22s} {v['found']:>3d}/{v['expected']:<3d}  {pct(v['recall'])}")
 
@@ -256,10 +282,14 @@ def write_report(clean, messy, l3) -> None:
     for c, v in clean["per_column"].items():
         lines.append(f"| {c} | {pct(v['recall'])} | {v['detected']}/{v['total']} |")
 
+    ov, st = messy["overlap"], messy["strict"]
     lines += ["", "## Messy data (23 cases)", "",
-              f"Overall recall **{pct(messy['recall'])}**, precision {pct(messy['precision'])}, "
-              f"F1 {messy['f1']:.3f}, F2 {messy['f2']:.3f} "
-              f"(TP {messy['tp']}, FN {messy['fn']}, FP {messy['fp']}).", "",
+              "Two yardsticks on the same detector (a partial/boundary hit is a partial",
+              "leak, so we report both a lenient ceiling and a conservative floor):", "",
+              "| Yardstick | Recall | Precision | F1 | F2 |", "| --- | --- | --- | --- | --- |",
+              f"| Overlap (partial hit counts) | {pct(ov['recall'])} | {pct(ov['precision'])} | {ov['f1']:.3f} | {ov['f2']:.3f} |",
+              f"| Strict (exact, partial = miss) | {pct(st['recall'])} | {pct(st['precision'])} | {st['f1']:.3f} | {st['f2']:.3f} |",
+              "", "Per-tag recall (overlap):", "",
               "| Tag | Recall | Found/Expected |", "| --- | --- | --- |"]
     for tag, v in messy["per_tag"].items():
         lines.append(f"| {tag} | {pct(v['recall'])} | {v['found']}/{v['expected']} |")

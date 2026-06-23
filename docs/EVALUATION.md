@@ -25,40 +25,48 @@ Overall recall **99.8%**, precision 99.9%, F1 0.999, F2 0.999. Reversible round-
 
 ## Messy data (23 cases)
 
-Overall recall **80.5%**, precision 84.6%, F1 0.825, F2 0.813 (TP 66, FN 16, FP 12).
+Two yardsticks on the same detector (a partial/boundary hit is a partial
+leak, so we report both a lenient ceiling and a conservative floor):
+
+| Yardstick | Recall | Precision | F1 | F2 |
+| --- | --- | --- | --- | --- |
+| Overlap (partial hit counts) | 90.2% | 90.2% | 0.902 | 0.902 |
+| Strict (exact, partial = miss) | 80.5% | 84.6% | 0.825 | 0.813 |
+
+Per-tag recall (overlap):
 
 | Tag | Recall | Found/Expected |
 | --- | --- | --- |
 | abbreviations | 100.0% | 9/9 |
 | chat | 66.7% | 2/3 |
 | conversational | 85.7% | 6/7 |
-| copypaste | 87.5% | 7/8 |
-| dense | 85.7% | 6/7 |
+| copypaste | 100.0% | 8/8 |
+| dense | 100.0% | 7/7 |
 | email_format | 100.0% | 3/3 |
 | email_forward | 100.0% | 3/3 |
 | emoji | 66.7% | 2/3 |
-| finnish | 94.7% | 18/19 |
+| finnish | 100.0% | 19/19 |
 | finnish_english | 100.0% | 3/3 |
 | informal | 50.0% | 3/6 |
-| list | 55.6% | 5/9 |
+| list | 88.9% | 8/9 |
 | medical | 100.0% | 3/3 |
 | medical_shorthand | 100.0% | 5/5 |
-| mexican | 80.0% | 4/5 |
+| mexican | 100.0% | 5/5 |
 | mixed_language | 85.7% | 6/7 |
-| multinational | 55.6% | 5/9 |
-| natural_date | 66.7% | 2/3 |
-| no_caps | 83.3% | 5/6 |
-| obfuscated | 75.0% | 3/4 |
-| partial | 40.0% | 2/5 |
+| multinational | 88.9% | 8/9 |
+| natural_date | 100.0% | 3/3 |
+| no_caps | 100.0% | 6/6 |
+| obfuscated | 100.0% | 4/4 |
+| partial | 60.0% | 3/5 |
 | partial_info | 33.3% | 1/3 |
 | real_world | 100.0% | 5/5 |
-| redacted | 40.0% | 2/5 |
+| redacted | 60.0% | 3/5 |
 | runon | 100.0% | 7/7 |
 | social_media | 66.7% | 2/3 |
 | spanish_english | 75.0% | 3/4 |
-| spelled_out | 75.0% | 3/4 |
-| structured | 68.8% | 11/16 |
-| tabs | 80.0% | 4/5 |
+| spelled_out | 100.0% | 4/4 |
+| structured | 93.8% | 15/16 |
+| tabs | 100.0% | 5/5 |
 | typos | 100.0% | 6/6 |
 | workplace | 100.0% | 3/3 |
 
