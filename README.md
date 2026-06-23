@@ -203,8 +203,16 @@ All three models fit comfortably in 6 GB VRAM. Full methodology in [`docs/LLM_BE
 ## Quick Start
 
 ```bash
+pip install preserve-pii          # the import name is `preserve`
+# extras: preserve-pii[llm]  (local LLM)  ·  [api]  (gateway)  ·  [ner]  ·  [all]
+```
+
+Or from source for development:
+
+```bash
+git clone https://github.com/thirtysix/Preserve && cd Preserve
 python -m venv .venv && source .venv/bin/activate
-pip install -e .
+pip install -e ".[dev]"
 cp .env.example .env  # Add your DEEPINFRA_API_KEY
 ```
 
