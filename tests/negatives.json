@@ -1,0 +1,17 @@
+[
+  "The algorithm processes data in parallel using 8 threads across the CPU cores.",
+  "def calculate_total(items): return sum(item.price for item in items)",
+  "The patient presented with acute myocardial infarction. Treatment includes aspirin 325mg and a heparin drip.",
+  "The conference will be held in Helsinki, Finland. Attendees from Europe and Asia are expected.",
+  "The new Model X features a 12-inch display, 256GB storage, and runs version 4.2 of the operating system.",
+  "Preheat the oven to 350 degrees. Mix 2 cups flour with 3 eggs. Bake for 25 minutes.",
+  "The team scored 3 goals in the second half. The final score was 4-1. The next match is on Saturday.",
+  "Tomorrow's forecast: partly cloudy with a high of 72 degrees. Wind from the northwest at 10 mph.",
+  "We need to leverage our core competencies to drive synergies across the organization.",
+  "Deploy version 4.2 to the staging server at port 8080, then run the integration tests before merging.",
+  "Quarterly revenue rose 12 percent while operating costs fell across all three regions.",
+  "The recipe yields 24 cookies; chill the dough for 30 minutes before baking at 180 C.",
+  "Chapter 7 covers gradient descent, regularization, and the bias-variance tradeoff in detail.",
+  "Water boils at 100 degrees Celsius at sea level and freezes at 0 degrees.",
+  "The library opens at 9 and closes at 5 on weekdays, with extended hours during exams."
+]

@@ -1,0 +1,102 @@
+[
+  {
+    "id": "name_common_word",
+    "text": "Please tell john smith that his order has shipped.",
+    "pii": [{"value": "john smith", "type": "NAME"}],
+    "tags": ["bare_name", "common_word"]
+  },
+  {
+    "id": "name_weak_context",
+    "text": "Email the report to the new hire, Bob, before Friday.",
+    "pii": [{"value": "Bob", "type": "NAME"}],
+    "tags": ["bare_name"]
+  },
+  {
+    "id": "name_lowercase_pair",
+    "text": "forwarded note from aurora rossi about the unpaid invoice.",
+    "pii": [{"value": "aurora rossi", "type": "NAME"}],
+    "tags": ["no_caps"]
+  },
+  {
+    "id": "name_intl_asian",
+    "text": "Min-jun Kim will join the design review call tomorrow.",
+    "pii": [{"value": "Min-jun Kim", "type": "NAME"}],
+    "tags": ["intl_name"]
+  },
+  {
+    "id": "name_after_title",
+    "text": "Spoke with Dr Korhonen about the lab results this morning.",
+    "pii": [{"value": "Korhonen", "type": "NAME"}],
+    "tags": ["titled_name"]
+  },
+  {
+    "id": "name_nickname",
+    "text": "The patient goes by Bobby; the full name is on file.",
+    "pii": [{"value": "Bobby", "type": "NAME"}],
+    "tags": ["nickname"]
+  },
+  {
+    "id": "custom_id",
+    "text": "Quote your case reference MEX-2345-6789 when you call back.",
+    "pii": [{"value": "MEX-2345-6789", "type": "OTHER"}],
+    "tags": ["custom_id"]
+  },
+  {
+    "id": "nl_date",
+    "text": "Her follow-up is scheduled for the fifth of June.",
+    "pii": [{"value": "the fifth of June", "type": "DOB"}],
+    "tags": ["natural_date"]
+  },
+  {
+    "id": "address_no_number",
+    "text": "The patient lives on Via Roma, near the central station.",
+    "pii": [{"value": "Via Roma", "type": "ADDRESS"}],
+    "tags": ["address_no_number"]
+  },
+  {
+    "id": "obfuscated_email",
+    "text": "You can reach me at john [at] example [dot] com any time.",
+    "pii": [{"value": "john [at] example [dot] com", "type": "EMAIL"}],
+    "tags": ["obfuscated"]
+  },
+  {
+    "id": "spelled_phone",
+    "text": "Call me at five five five one two three four five six seven.",
+    "pii": [{"value": "five five five one two three four five six seven", "type": "PHONE"}],
+    "tags": ["spelled_out"]
+  },
+  {
+    "id": "passport_bare",
+    "text": "Document CC6770619 was issued in Rome last spring.",
+    "pii": [{"value": "CC6770619", "type": "PASSPORT"}],
+    "tags": ["bare_id"]
+  },
+  {
+    "id": "iban_no_label",
+    "text": "Please transfer the deposit to FI4950000120000062 by Friday.",
+    "pii": [{"value": "FI4950000120000062", "type": "IBAN"}],
+    "tags": ["bare_id"]
+  },
+  {
+    "id": "dob_iso_no_label",
+    "text": "The record was created 1971-04-05 for the new intake.",
+    "pii": [{"value": "1971-04-05", "type": "DOB"}],
+    "tags": ["standalone_date"]
+  },
+  {
+    "id": "redacted_partial",
+    "text": "His SSN ends in 6789 and the card ends 4242.",
+    "pii": [{"value": "6789", "type": "OTHER"}, {"value": "4242", "type": "OTHER"}],
+    "tags": ["redacted", "partial"]
+  },
+  {
+    "id": "mixed_hard",
+    "text": "pt john smith, ref MEX-2345-6789, currently lives on Via Roma.",
+    "pii": [
+      {"value": "john smith", "type": "NAME"},
+      {"value": "MEX-2345-6789", "type": "OTHER"},
+      {"value": "Via Roma", "type": "ADDRESS"}
+    ],
+    "tags": ["mixed"]
+  }
+]

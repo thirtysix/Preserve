@@ -70,6 +70,25 @@ Per-tag recall (overlap):
 | typos | 100.0% | 6/6 |
 | workplace | 100.0% | 3/3 |
 
+## Hard set (Layer 2 only, typed blind spots)
+
+Held-out cases targeting what the deterministic layers struggle with. Overall recall **47.4%** (9/19 items). This is the floor the local LLM (Layer 3) is meant to lift.
+
+| PII type | Recall | Found/Total |
+| --- | --- | --- |
+| ADDRESS | 0.0% | 0/2 |
+| DOB | 50.0% | 1/2 |
+| EMAIL | 100.0% | 1/1 |
+| IBAN | 100.0% | 1/1 |
+| NAME | 42.9% | 3/7 |
+| OTHER | 50.0% | 2/4 |
+| PASSPORT | 0.0% | 0/1 |
+| PHONE | 100.0% | 1/1 |
+
+## Negatives (no-PII text)
+
+Clean (zero detections) on **15/15** texts; 0 false positive(s) total.
+
 ## Layer 3 (local LLM, GPU, current pipeline)
 
 | Model | Precision | Recall | F1 | F2 |
