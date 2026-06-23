@@ -46,11 +46,13 @@ class PreserveConfig(BaseModel):
         description="URL of the llama-server when using server backend",
     )
     llm_model_path: str = Field(
-        default="models/Qwen3.5-0.8B-Q4_K_M.gguf",
+        default="models/Qwen3.5-4B-Q4_K_M.gguf",
         description=(
             "Path to a GGUF model file (used by embedded backend). "
-            "Default: Qwen3.5-0.8B Q4_K_M (508 MB). "
-            "Download from: huggingface.co/unsloth/Qwen3.5-0.8B-GGUF"
+            "Default: Qwen3.5-4B Q4_K_M (2.6 GB), the most accurate Layer 3 model "
+            "(F1 0.85 on the benchmark; ~2.6s/region on GPU, slower on CPU). "
+            "Use the 0.8B/2B presets for CPU-only or low-memory setups. "
+            "Download from: huggingface.co/unsloth/Qwen3.5-4B-GGUF"
         ),
     )
     llm_threshold: float = Field(

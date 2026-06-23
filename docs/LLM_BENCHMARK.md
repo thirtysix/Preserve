@@ -8,7 +8,7 @@ Two backends are supported:
 - **Server** (recommended): Native llama-server via OpenAI-compatible HTTP API. Start with `./scripts/start_llm_server.sh [gpu|cpu]`.
 - **Embedded**: llama-cpp-python in-process. No server needed, but ~20% slower on CPU.
 
-The benchmarks below were run using the **embedded (llama-cpp-python)** backend in chat mode.
+The headline results below are from the current shipped pipeline on GPU. The detailed per-case tables further down come from an earlier CPU run whose ranking has been superseded (see the note under Summary Results).
 
 ## Models Tested
 
@@ -18,30 +18,44 @@ The benchmarks below were run using the **embedded (llama-cpp-python)** backend 
 | Qwen3.5-2B | Q4_K_M | 1.2 GB | ~3.5 GB | [unsloth/Qwen3.5-2B-GGUF](https://huggingface.co/unsloth/Qwen3.5-2B-GGUF) |
 | Qwen3.5-4B | Q4_K_M | 2.6 GB | ~5.5 GB | [unsloth/Qwen3.5-4B-GGUF](https://huggingface.co/unsloth/Qwen3.5-4B-GGUF) |
 
-## Test Environment
-
-- **Hardware**: x86_64 Linux, 16 CPU cores (benchmark used 8)
-- **Inference**: llama-cpp-python 0.3.19, CPU-only (no GPU)
-- **Prompt mode**: Chat completion with native Qwen3.5 template
-- **Thinking mode**: Disabled via `/no_think` token in system prompt
-- **Few-shot examples**: 4 examples included in each prompt
-- **Temperature**: 0.0 (deterministic)
-- **Max tokens**: 256 per response
-- **Date**: 2026-03-30
-
 ## Summary Results
 
-| Model | Precision | Recall | F1 Score | Avg Time/Region | Model Load |
-|-------|-----------|--------|----------|----------------|------------|
-| **Qwen3.5-0.8B** | 67.9% | **61.3%** | **0.644** | **6.9s** | 0.8s |
-| Qwen3.5-2B | 66.7% | 38.7% | 0.490 | 10.3s | 1.0s |
-| Qwen3.5-4B | **80.0%** | 51.6% | 0.627 | 24.2s | 1.9s |
+Current pipeline, measured 2026-06-23: native `llama-server` with full GPU offload
+(`-ngl 99`) on an RTX 3060 6 GB Laptop GPU, `--reasoning off`, selected-prompt mode,
+the 16-case set. Reproduce with `python scripts/benchmark_llm.py --backend server`.
 
-**Selected model**: Qwen3.5-0.8B Q4_K_M: best F1 score, fastest inference, smallest footprint.
+| Model | Precision | Recall | F1 Score | Avg Time/Region | Server Start |
+|-------|-----------|--------|----------|-----------------|--------------|
+| Qwen3.5-0.8B | 45.7% | 51.6% | 0.485 | 0.59s | 2.0s |
+| Qwen3.5-2B | 71.4% | 32.3% | 0.444 | 0.49s | 2.0s |
+| **Qwen3.5-4B** | **89.3%** | **80.6%** | **0.847** | 2.62s | 2.0s |
+
+**Selected model**: Qwen3.5-4B Q4_K_M, by a wide margin: best F1 (0.85), best precision
+(89%), best recall (81%). On GPU it stays fast (~2.6s/region); on CPU it is slower
+(~24s/region), so the 0.8B/2B remain options for CPU-only or low-memory setups. The 0.8B
+is fast but noisy, much of its apparent recall is spurious (it tagged words like "She",
+"lives", and "at" as names), which is why its precision is only 46%.
+
+### Superseded: 2026-03-30 CPU run
+
+An earlier embedded-CPU benchmark (llama-cpp-python, pre-prompt-fix conditions: 4 few-shot
+examples and `/no_think` inside a system prompt) ranked the 0.8B first. That ranking did
+not survive a fair re-run on the current pipeline and is kept only for history:
+
+| Model | Precision | Recall | F1 Score | Avg Time/Region |
+|-------|-----------|--------|----------|-----------------|
+| Qwen3.5-0.8B | 67.9% | 61.3% | 0.644 | 6.9s |
+| Qwen3.5-2B | 66.7% | 38.7% | 0.490 | 10.3s |
+| Qwen3.5-4B | 80.0% | 51.6% | 0.627 | 24.2s |
+
+The reversal came mostly from cleaner thinking-mode handling (`--reasoning off` on the
+native server) plus the selected-prompt architecture, which the larger model benefits from
+most; the old CPU run also throttled the 4B to 24s/region. The per-case tables below detail
+this superseded CPU run.
 
 ## Per-Case Results
 
-### Qwen3.5-0.8B-Q4_K_M (Selected)
+### Qwen3.5-0.8B-Q4_K_M
 
 | Test Case | Status | Expected | TP | FN | FP | Time |
 |-----------|--------|----------|-----|-----|-----|------|
@@ -123,7 +137,7 @@ The benchmarks below were run using the **embedded (llama-cpp-python)** backend 
 
 ## Key Findings
 
-1. **The 0.8B model is the best overall choice**: highest F1 (0.644), fastest (6.9s/region), smallest (508 MB). The 2B model paradoxically performed worst.
+1. **The 4B model is the best overall choice** (current pipeline): highest F1 (0.847), precision (89.3%), and recall (80.6%). The earlier "0.8B is best" result was an artifact of the superseded CPU run; on a fair re-run the 0.8B's recall proved largely spurious (precision 46%) and bigger was clearly better, as expected.
 
 2. **All models excel at mixed/contextual PII**: when text contains multiple PII types with surrounding context (the `mixed_pii` and `dataset_row_narrative` cases), all models detected 5-6 of 6 items. This is exactly what Layer 3 receives from the normalcy scanner.
 

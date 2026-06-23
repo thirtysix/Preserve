@@ -134,7 +134,7 @@ Layer 2: DETECTION PIPELINE
     └── 2h: Hybrid name scorer (names-dataset + wordfreq gazetteer)
     │
 Layer 3: LOCAL LLM REVIEW (optional)
-    │   Qwen3.5-0.8B via llama-server or llama-cpp-python
+    │   Qwen3.5 (4B default) via llama-server or llama-cpp-python
     │   Reviews suspicious regions with >>>..<<< markers
     │   Runs locally; nothing leaves the machine
     ▼
@@ -347,9 +347,9 @@ For PII that regex can't catch (bare names in informal text, natural-language da
 
 ```bash
 # Download a bundled Qwen3.5 GGUF (helper supports presets 0.8B / 2B / 4B):
-python scripts/download_model.py --model 0.8B --quant Q4_K_M   # Qwen3.5-0.8B Q4_K_M, ~533 MB
+python scripts/download_model.py --model 4B --quant Q4_K_M     # Qwen3.5-4B, recommended (best accuracy), ~2.6 GB
 # python scripts/download_model.py --model 2B --quant Q4_K_M    # Qwen3.5-2B,  ~1.4 GB
-# python scripts/download_model.py --model 4B --quant Q8_0      # Qwen3.5-4B,  larger/higher quality
+# python scripts/download_model.py --model 0.8B --quant Q4_K_M  # Qwen3.5-0.8B, lightest/fastest on CPU, ~533 MB
 # python scripts/download_model.py --list                       # show all preset size/quant combos
 ```
 
@@ -359,7 +359,7 @@ config = PreserveConfig(use_llm_review=True, llm_backend="server")   # start the
 
 # Option B: Embedded backend (no server needed, CPU only)
 config = PreserveConfig(use_llm_review=True, llm_backend="embedded",
-                        llm_model_path="models/Qwen3.5-0.8B-Q4_K_M.gguf")
+                        llm_model_path="models/Qwen3.5-4B-Q4_K_M.gguf")
 ```
 
 ```bash
