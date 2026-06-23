@@ -1,0 +1,57 @@
+[build-system]
+requires = ["setuptools>=64", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "preserve-pii"
+version = "0.4.0"
+description = "Privacy-preserving PII detection and scrubbing for LLM inference queries"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { file = "LICENSE" }
+authors = [{ name = "Harlan Barker" }]
+keywords = ["pii", "privacy", "redaction", "llm", "anonymization", "gdpr", "scrubbing", "ner"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Security",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Text Processing :: Linguistic",
+]
+dependencies = [
+    "openai>=1.0.0",
+    "pydantic>=2.0",
+    "python-dotenv>=1.0.0",
+    "phonenumbers>=9.0.0",
+    "email-validator>=2.0.0",
+    "dateparser>=1.0.0",
+    "names-dataset>=3.0.0",
+    "wordfreq>=3.0.0",
+]
+
+[project.optional-dependencies]
+ner = ["spacy>=3.0"]
+llm = ["llama-cpp-python>=0.2.0"]
+api = ["fastapi>=0.110", "uvicorn>=0.27"]
+redis = ["redis>=5.0"]
+all = ["spacy>=3.0", "llama-cpp-python>=0.2.0", "fastapi>=0.110", "uvicorn>=0.27", "redis>=5.0"]
+dev = ["pytest>=7.0", "pytest-mock>=3.0", "huggingface-hub", "httpx", "build", "twine"]
+
+[project.urls]
+Homepage = "https://github.com/thirtysix/Preserve"
+Repository = "https://github.com/thirtysix/Preserve"
+"Live demo" = "https://thirtysix.github.io/Preserve/"
+Changelog = "https://github.com/thirtysix/Preserve/blob/main/CHANGELOG.md"
+
+[project.scripts]
+preserve = "preserve.__main__:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["preserve*"]

@@ -11,3 +11,7 @@ vendor/
 logs/
 api_keys.json
 nextsession.md
+
+# Build artifacts
+build/
+dist/
