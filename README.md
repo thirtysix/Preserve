@@ -7,6 +7,7 @@ Privacy-preserving PII detection and scrubbing for LLM inference queries. Preser
 - **International:** 49+ regex patterns and 9 checksum validators across 15+ countries.
 - **Layered:** fast deterministic detection, with an optional local LLM for the hard cases.
 
+[![PyPI](https://img.shields.io/pypi/v/preserve-pii.svg)](https://pypi.org/project/preserve-pii/)
 [![CI](https://github.com/thirtysix/Preserve/actions/workflows/ci.yml/badge.svg)](https://github.com/thirtysix/Preserve/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Live demo](https://img.shields.io/badge/demo-live-brightgreen)](https://thirtysix.github.io/Preserve/)
