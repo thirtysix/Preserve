@@ -58,6 +58,24 @@ So the default `ner_labels = ["PERSON", "GPE", "FAC", "DATE"]` captures almost a
 recall gain at near-baseline precision; adding `ORG` buys ~3 more points of recall but costs
 ~8 points of precision and lowers F1, so it is excluded by default.
 
+## NER on real data (TAB court cases, 400 docs)
+
+The structural recall lever for locations/addresses is spaCy NER: regex can detect a
+street + number, but it cannot recognize a bare city ("Warsaw", "Ankara") the way
+NER's GPE/FAC entities can. Measured on real ECHR cases:
+
+| Category | Regex only | + NER (`use_ner=True`) |
+| --- | --- | --- |
+| ADDRESS (mostly cities here) | 19% | **82%** |
+| NAME | 66% | **90%** |
+| DATE | 87% | **99%** |
+
+NER roughly quadruples address recall on real prose. The cost is more over-redaction
+(detections overlapping no gold span rose ~2.4x), which for anonymization is the
+acceptable direction; it stays off by default because spaCy is an optional dependency.
+This is why a dedicated address parser (e.g. libpostal) is not needed: NER already
+reaches 82% on real text, and it covers names and dates too.
+
 ## Takeaways
 
 - **Adding IPv6 detection took IP recall from 51.7% to 100%** and lifted overall aggressive

@@ -448,7 +448,9 @@ config = PreserveConfig(sensitivity_level=SensitivityLevel.AGGRESSIVE, use_ner=T
 
 On a 500-sample slice of the ai4privacy corpus, NER lifts recall from **66.8% to
 82.8%** (+16 points) for only ~1 point of precision (89.7% to 88.5%), and is the best
-config by F1. By default NER accepts `PERSON`, `GPE`, `FAC`, and `DATE`; `ORG` is
+config by F1. It is also the lever for locations: on real ECHR court cases (TAB) it
+takes **address recall from 19% to 82%** (regex can match a street + number but not a
+bare city). By default NER accepts `PERSON`, `GPE`, `FAC`, and `DATE`; `ORG` is
 deliberately excluded because it drops precision ~8 points with little PII value (add
 it via `ner_labels=[..., "ORG"]` only if you want maximum recall). Full numbers in
 [`docs/CORPUS_EVAL.md`](docs/CORPUS_EVAL.md).
