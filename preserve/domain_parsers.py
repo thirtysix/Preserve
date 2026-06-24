@@ -140,6 +140,17 @@ class DateParser:
             if _re.search(r"\d+\s*(?:minutes?|hours?|days?|weeks?|months?|seconds?|yrs?|hrs?|mins?|secs?)\b", date_string, _re.I):
                 continue
 
+            # Skip bare clock times ("12:34:56", "at 23:59 today"): a time with no
+            # explicit date in the string (dateparser resolves "today" to a full
+            # date internally, but the matched text carries no real date).
+            if _re.search(r"\b\d{1,2}:\d{2}", date_string) and not (
+                _re.search(r"\b\d{4}\b", date_string)
+                or _re.search(r"\d{1,2}[/-]\d{1,2}", date_string)
+                or _re.search(r"\b(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)",
+                              date_string, _re.I)
+            ):
+                continue
+
             matches.append(
                 DomainMatch(
                     start=idx,

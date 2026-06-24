@@ -219,8 +219,11 @@ class HybridNameScorer:
             if t1.lower() in CONTEXT_WORDS or t2.lower() in CONTEXT_WORDS:
                 continue
 
-            # Must be adjacent (allow small gap for spaces)
+            # Must be adjacent, separated only by whitespace/comma (a name pair
+            # should not span punctuation like ":" in "aa:bb:cc:dd:ee:ff").
             if w2.start() - w1.end() > 2:
+                continue
+            if not re.fullmatch(r"[\s,]*", text[w1.end():w2.start()]):
                 continue
 
             # Both must be in the name gazetteer

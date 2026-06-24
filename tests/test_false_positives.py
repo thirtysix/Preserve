@@ -21,6 +21,19 @@ def scrubber():
 class TestNoFalsePositives:
     """Text that contains NO PII and should produce zero detections."""
 
+    def test_clock_time_not_dob(self, scrubber):
+        # A bare time must not be parsed as a date of birth.
+        for text in ("meeting at 12:34:56 today", "backup ran 23:59:59", "standup at 09:30"):
+            result = scrubber.scrub(text)
+            assert not any(d.replacement_type == "DOB" for d in result.detections), \
+                f"time -> DOB: {[d.matched_text for d in result.detections]}"
+
+    def test_mac_address_not_name(self, scrubber):
+        # Hex groups separated by ':' must not be read as a name pair.
+        result = scrubber.scrub("MAC aa:bb:cc:dd:ee:ff on the switch")
+        assert not any(d.replacement_type == "NAME" for d in result.detections), \
+            f"MAC -> NAME: {[d.matched_text for d in result.detections]}"
+
     def test_technical_prose(self, scrubber):
         text = "The algorithm processes data in parallel using 8 threads across the CPU cores."
         result = scrubber.scrub(text)

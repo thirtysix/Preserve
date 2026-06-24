@@ -277,6 +277,7 @@
       if (NAME_SKIP.has(t1) || NAME_SKIP.has(t2)) continue;
       if (NAME_CONTEXT_WORDS.has(t1) || NAME_CONTEXT_WORDS.has(t2)) continue;
       if (s2 - e1 > 2) continue;
+      if (!/^[\s,]*$/.test(text.slice(e1, s2))) continue;  // no pair across ':' etc.
       const pair = (FIRST.has(t1) && LAST.has(t2)) || (LAST.has(t1) && FIRST.has(t2));
       if (!pair) continue;
       if (COMMON.has(t1) && COMMON.has(t2)) continue;
