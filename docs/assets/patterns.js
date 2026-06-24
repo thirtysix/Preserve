@@ -364,7 +364,7 @@ window.PRESERVE_PATTERNS = [
   },
   {
     "name": "health_insurance_id",
-    "source": "(?:(?:health|medical)\\s*(?:insurance|plan)\\s*(?:id|#|number|no\\.?)?|member\\s*(?:id|#|number)|policy\\s*(?:#|number|no\\.?)?|group\\s*(?:#|number))[:\\s]*([A-Z0-9]{4,20})\\b",
+    "source": "(?:(?:health|medical)\\s*(?:insurance|plan)\\s*(?:id|#|number|no\\.?)?|member\\s*(?:id|#|number)|policy\\s*(?:#|number|no\\.?)?|group\\s*(?:#|number))[:\\s]*((?=[A-Z0-9]*\\d)[A-Z0-9]{4,20})\\b",
     "flags": "i",
     "group": 1,
     "sensitivity": "standard",

@@ -37,6 +37,16 @@ class TestNoFalsePositives:
             assert not any(d.replacement_type == "DOB" for d in result.detections), \
                 f"relative date -> DOB: {[d.matched_text for d in result.detections]}"
 
+    def test_policy_words_not_insurance_id(self, scrubber):
+        # "policy"/"health insurance" + a plain word must not be an insurance ID;
+        # a real ID has digits.
+        for text in ("policy reform can revolutionize education",
+                     "contact your health insurance provider",
+                     "due to recent policy changes we updated terms"):
+            result = scrubber.scrub(text)
+            assert not any(d.replacement_type == "INSURANCE_ID" for d in result.detections), \
+                f"policy word -> INSURANCE_ID: {[d.matched_text for d in result.detections]}"
+
     def test_bank_keyword_substring_not_financial(self, scrubber):
         # "account"/"bank" inside larger words must not trigger a FINANCIAL match,
         # and a non-numeric value after the keyword must not be captured.

@@ -262,7 +262,7 @@ HEALTH_INSURANCE_ID = PIIPattern(
     regex=re.compile(
         r"(?:(?:health|medical)\s*(?:insurance|plan)\s*(?:id|#|number|no\.?)?|"
         r"member\s*(?:id|#|number)|policy\s*(?:#|number|no\.?)?|group\s*(?:#|number))"
-        r"[:\s]*([A-Z0-9]{4,20})\b",
+        r"[:\s]*((?=[A-Z0-9]*\d)[A-Z0-9]{4,20})\b",  # value must contain a digit (not a word like "policy reform")
         re.IGNORECASE,
     ),
     min_sensitivity=SensitivityLevel.STANDARD,
