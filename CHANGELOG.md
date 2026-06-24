@@ -4,6 +4,17 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project aims to follow
 semantic versioning.
 
+## [0.5.1] - 2026-06-24
+
+### Fixed
+- Bare clock times (e.g. `12:34:56`, `23:59 today`) are no longer misread as a date of birth.
+- MAC-style hex (`aa:bb:cc:dd:ee:ff`) is no longer flagged as a name (the gazetteer pair pass
+  no longer spans punctuation like `:`).
+
+### Changed
+- Docs: the README and live demo now reflect the full 65-pattern set, the secrets/credential
+  category, and IPv6. (The 0.5.0 PyPI page predated these doc updates; this release refreshes it.)
+
 ## [0.5.0] - 2026-06-24
 
 ### Added
