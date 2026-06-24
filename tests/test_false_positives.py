@@ -28,6 +28,25 @@ class TestNoFalsePositives:
             assert not any(d.replacement_type == "DOB" for d in result.detections), \
                 f"time -> DOB: {[d.matched_text for d in result.detections]}"
 
+    def test_relative_and_duration_dates_not_dob(self, scrubber):
+        # Relative/fuzzy date references and durations are not PII.
+        for text in ("let's meet tomorrow", "as we discussed yesterday",
+                     "the remaining 10% released one year after completion",
+                     "a price deal for 1, 3, 5, 7 and 10 years"):
+            result = scrubber.scrub(text)
+            assert not any(d.replacement_type == "DOB" for d in result.detections), \
+                f"relative date -> DOB: {[d.matched_text for d in result.detections]}"
+
+    def test_bank_keyword_substring_not_financial(self, scrubber):
+        # "account"/"bank" inside larger words must not trigger a FINANCIAL match,
+        # and a non-numeric value after the keyword must not be captured.
+        for text in ("registered public accountants filed the report",
+                     "a trustee in bankruptcy was appointed",
+                     "Thanks, the Account Team"):
+            result = scrubber.scrub(text)
+            assert not any(d.replacement_type == "FINANCIAL" for d in result.detections), \
+                f"bank substring -> FINANCIAL: {[d.matched_text for d in result.detections]}"
+
     def test_mac_address_not_name(self, scrubber):
         # Hex groups separated by ':' must not be read as a name pair.
         result = scrubber.scrub("MAC aa:bb:cc:dd:ee:ff on the switch")

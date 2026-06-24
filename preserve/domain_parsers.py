@@ -140,15 +140,20 @@ class DateParser:
             if _re.search(r"\d+\s*(?:minutes?|hours?|days?|weeks?|months?|seconds?|yrs?|hrs?|mins?|secs?)\b", date_string, _re.I):
                 continue
 
-            # Skip bare clock times ("12:34:56", "at 23:59 today"): a time with no
-            # explicit date in the string (dateparser resolves "today" to a full
-            # date internally, but the matched text carries no real date).
-            if _re.search(r"\b\d{1,2}:\d{2}", date_string) and not (
-                _re.search(r"\b\d{4}\b", date_string)
-                or _re.search(r"\d{1,2}[/-]\d{1,2}", date_string)
+            # Skip runaway spans (a real date is short, not a paragraph).
+            if len(date_string) > 45:
+                continue
+            # Require an explicit calendar date in the matched text. Without one it
+            # is a relative/fuzzy reference ("tomorrow", "next week", "3 years",
+            # "one year after") or a bare clock time, which dateparser resolves to a
+            # full date internally but is not PII.
+            has_date = (
+                _re.search(r"\b(?:18|19|20)\d{2}\b", date_string)               # explicit year
+                or _re.search(r"\d{1,2}[/-]\d{1,2}", date_string)                # numeric date
                 or _re.search(r"\b(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)",
-                              date_string, _re.I)
-            ):
+                              date_string, _re.I)                                 # month name
+            )
+            if not has_date:
                 continue
 
             matches.append(

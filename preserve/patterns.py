@@ -603,9 +603,11 @@ FINLAND_PHONE = PIIPattern(
 BANK_CONTEXTUAL = PIIPattern(
     name="bank_contextual",
     regex=re.compile(
-        r"(?:bank|branch|acct|account|routing|BSB|sort\s*code)\s*"
-        r"(?:#|number|no\.?|code)?[:\s]*"
-        r"([A-Z0-9][A-Z0-9\s\-]{2,20}[A-Z0-9])",
+        # Word-bounded keyword (so it doesn't fire inside "accountant"/"bankrupt"),
+        # then a digit-led, account-number-like value (not arbitrary words).
+        r"\b(?:bank|branch|acct|account|routing|BSB|sort\s*code)\b\s*"
+        r"(?:#|number|no\.?|code)?[:\s#]*"
+        r"(\d[\d\s\-]{4,20}\d)",
         re.IGNORECASE,
     ),
     min_sensitivity=SensitivityLevel.STANDARD,
