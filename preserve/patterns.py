@@ -647,6 +647,105 @@ INTL_PHONE = PIIPattern(
 )
 
 # Ordered by specificity (more specific patterns first to avoid partial matches)
+# --- Secrets / credentials (prevent leaking API keys, tokens, keys to an LLM) ---
+
+AWS_ACCESS_KEY = PIIPattern(
+    name="aws_access_key",
+    regex=re.compile(r"\b(?:AKIA|ASIA|AGPA|AIDA|AROA|AIPA|ANPA|ANVA|A3T[A-Z0-9])[A-Z0-9]{16}\b"),
+    min_sensitivity=SensitivityLevel.MINIMAL,
+    description="AWS access key ID",
+    replacement_type="SECRET",
+)
+
+GITHUB_TOKEN = PIIPattern(
+    name="github_token",
+    regex=re.compile(r"\b(?:gh[pousr]_[A-Za-z0-9]{36,}|github_pat_[A-Za-z0-9_]{22,})\b"),
+    min_sensitivity=SensitivityLevel.MINIMAL,
+    description="GitHub personal access / app token",
+    replacement_type="SECRET",
+)
+
+ANTHROPIC_KEY = PIIPattern(
+    name="anthropic_key",
+    regex=re.compile(r"\bsk-ant-[A-Za-z0-9_-]{20,}\b"),
+    min_sensitivity=SensitivityLevel.MINIMAL,
+    description="Anthropic API key",
+    replacement_type="SECRET",
+)
+
+OPENAI_KEY = PIIPattern(
+    name="openai_key",
+    regex=re.compile(r"\bsk-(?:proj-)?[A-Za-z0-9]{20,}\b"),
+    min_sensitivity=SensitivityLevel.MINIMAL,
+    description="OpenAI API key",
+    replacement_type="SECRET",
+)
+
+GOOGLE_API_KEY = PIIPattern(
+    name="google_api_key",
+    regex=re.compile(r"\bAIza[0-9A-Za-z_\-]{35}\b"),
+    min_sensitivity=SensitivityLevel.MINIMAL,
+    description="Google API key",
+    replacement_type="SECRET",
+)
+
+SLACK_TOKEN = PIIPattern(
+    name="slack_token",
+    regex=re.compile(r"\bxox[baprs]-[0-9A-Za-z-]{10,}\b"),
+    min_sensitivity=SensitivityLevel.MINIMAL,
+    description="Slack token",
+    replacement_type="SECRET",
+)
+
+STRIPE_KEY = PIIPattern(
+    name="stripe_key",
+    regex=re.compile(r"\b(?:sk|rk|pk)_(?:live|test)_[0-9A-Za-z]{16,}\b"),
+    min_sensitivity=SensitivityLevel.MINIMAL,
+    description="Stripe API key",
+    replacement_type="SECRET",
+)
+
+JWT_TOKEN = PIIPattern(
+    name="jwt",
+    regex=re.compile(r"\beyJ[A-Za-z0-9_-]{10,}\.eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\b"),
+    min_sensitivity=SensitivityLevel.MINIMAL,
+    description="JSON Web Token (JWT)",
+    replacement_type="SECRET",
+)
+
+PRIVATE_KEY_PEM = PIIPattern(
+    name="private_key_pem",
+    regex=re.compile(
+        r"-----BEGIN (?:[A-Z0-9]+ )*PRIVATE KEY-----[\s\S]*?-----END (?:[A-Z0-9]+ )*PRIVATE KEY-----"
+    ),
+    min_sensitivity=SensitivityLevel.MINIMAL,
+    description="PEM private key block",
+    replacement_type="SECRET",
+)
+
+DB_CONNECTION_URI = PIIPattern(
+    name="db_connection_uri",
+    regex=re.compile(
+        r"\b(?:postgres(?:ql)?|mysql|mongodb(?:\+srv)?|redis|amqps?)://[^\s:@/]+:[^\s:@/]+@[^\s/]+",
+    ),
+    min_sensitivity=SensitivityLevel.STANDARD,
+    description="Database/broker connection URI with embedded credentials",
+    replacement_type="SECRET",
+)
+
+SECRET_ASSIGNMENT = PIIPattern(
+    name="secret_assignment",
+    regex=re.compile(
+        r"(?:api[_-]?key|secret(?:[_-]?key)?|access[_-]?token|auth[_-]?token"
+        r"|client[_-]?secret|password|passwd|pwd|bearer)\b['\"]?(?:\s*[:=]\s*|\s+)['\"]?"
+        r"([A-Za-z0-9_\-./+=]{12,})",
+        re.IGNORECASE,
+    ),
+    min_sensitivity=SensitivityLevel.STANDARD,
+    description="Secret assigned after a keyword (api_key=, password:, bearer ...)",
+    replacement_type="SECRET",
+)
+
 ALL_PATTERNS: list[PIIPattern] = [
     # High-confidence structured (MINIMAL)
     SSN,
@@ -672,6 +771,18 @@ ALL_PATTERNS: list[PIIPattern] = [
     INTL_PHONE,
     IP_ADDRESS,
     IP_ADDRESS_V6,
+    # Secrets / credentials
+    AWS_ACCESS_KEY,
+    GITHUB_TOKEN,
+    ANTHROPIC_KEY,
+    OPENAI_KEY,
+    GOOGLE_API_KEY,
+    SLACK_TOKEN,
+    STRIPE_KEY,
+    JWT_TOKEN,
+    PRIVATE_KEY_PEM,
+    DB_CONNECTION_URI,
+    SECRET_ASSIGNMENT,
     US_DRIVERS_LICENSE,
     HEALTH_INSURANCE_ID,
     NPI_NUMBER,
