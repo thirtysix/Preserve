@@ -4,6 +4,27 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project aims to follow
 semantic versioning.
 
+## [Unreleased]
+
+### Added
+- Anthropic `/v1/messages` now supports **streaming** (`stream=true`, Anthropic-format SSE
+  events with placeholder-aware incremental restore) and translates/restores **`tool_use`**
+  blocks (OpenAI `tool_calls` -> Anthropic `tool_use`, PII restored in the tool input).
+
+### Fixed
+- Dot-separated dates ("DOB: 15.3.1990", bare "15.3.1990") are now detected; the generic
+  numeric-date pattern is separator- and order-agnostic and year-anchored, so version
+  numbers ("1.2.3") and IPs are not flagged.
+- INSURANCE_ID requires a digit in the captured value (no more "policy reform" / "health
+  insurance provider" false positives).
+
+### Changed
+- Recovered worded/parenthesized ACCOUNT numbers ("account (No. 53977069)") lost to the
+  earlier precision tightening, keeping FINANCIAL false positives ~0 (ACCOUNT recall on
+  ai4privacy 56.5% -> 60.5%).
+- Documented NER as the location/address recall lever (real-data ADDRESS recall 19% -> 82%);
+  libpostal is not needed.
+
 ## [0.5.2] - 2026-06-24
 
 Error analysis on real corpora (TAB ECHR court cases, Enron email) plus synthetic

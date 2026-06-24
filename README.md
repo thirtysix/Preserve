@@ -306,7 +306,7 @@ print(resp.choices[0].message.content)   # PII restored; the upstream model only
 | Endpoint | Purpose |
 | --- | --- |
 | `POST /v1/chat/completions` | OpenAI-compatible proxy: scrub → upstream LLM → restore (supports `stream=true`). Map never stored. |
-| `POST /v1/messages` | Anthropic-compatible proxy (same scrub → upstream → restore, Anthropic request/response shape). |
+| `POST /v1/messages` | Anthropic-compatible proxy (scrub → upstream → restore, Anthropic shape; supports `stream=true` and restores `tool_use` inputs). |
 | `POST /v1/scrub` | Scrub only → returns sanitized text + a reversible placeholder map (client holds it). |
 | `POST /v1/restore` | Re-insert PII given text + that map. |
 | `POST /v1/detect` | Detection only (types/spans/confidence); `include_values: false` omits raw PII. |

@@ -216,12 +216,63 @@ def test_anthropic_messages_content_blocks():
     assert "123-45-6789" not in user_sent and "[SSN_1]" in user_sent
 
 
-def test_anthropic_messages_stream_rejected():
-    client, _ = make_client()
+def test_anthropic_messages_streaming_restores():
+    client, fake = make_client()
+
+    def fake_create(model, messages, stream=False, **kw):
+        assert stream is True
+        frags = ["Sure, ", "writing to [EMA", "IL_1]", " now."]
+
+        def gen():
+            for fr in frags:
+                yield types.SimpleNamespace(model_dump=lambda fr=fr: {
+                    "choices": [{"index": 0, "delta": {"content": fr}, "finish_reason": None}]})
+        return gen()
+    fake.chat.completions.create = fake_create
+
     r = client.post("/v1/messages", json={
-        "messages": [{"role": "user", "content": "hi"}], "stream": True,
+        "model": "test-model", "stream": True,
+        "messages": [{"role": "user", "content": "Email jane@acme.com about it"}],
     }, headers=AUTH)
-    assert r.status_code == 400
+    assert r.status_code == 200
+    body = r.text
+    assert "event: message_start" in body and "event: message_stop" in body
+    text = ""
+    for line in body.splitlines():
+        if line.startswith("data: "):
+            try:
+                obj = __import__("json").loads(line[6:])
+            except Exception:
+                continue
+            if obj.get("type") == "content_block_delta" and obj["delta"].get("type") == "text_delta":
+                text += obj["delta"]["text"]
+    assert text == "Sure, writing to jane@acme.com now."
+    assert "[EMAIL_1]" not in body and "[EMA" not in body
+
+
+def test_anthropic_messages_tool_use_restored():
+    client, fake = make_client()
+
+    def fake_create(model, messages, **kw):
+        return types.SimpleNamespace(model_dump=lambda: {
+            "id": "msg-x", "model": model,
+            "choices": [{"index": 0, "finish_reason": "tool_calls", "message": {
+                "role": "assistant", "content": None,
+                "tool_calls": [{"id": "call_1", "type": "function", "function": {
+                    "name": "send_email", "arguments": '{"to": "[EMAIL_1]"}'}}]}}],
+            "usage": {"total_tokens": 10}})
+    fake.chat.completions.create = fake_create
+
+    r = client.post("/v1/messages", json={
+        "model": "test-model",
+        "messages": [{"role": "user", "content": "Email jane@acme.com"}],
+    }, headers=AUTH)
+    assert r.status_code == 200
+    body = r.json()
+    tool_blocks = [b for b in body["content"] if b["type"] == "tool_use"]
+    assert tool_blocks and tool_blocks[0]["name"] == "send_email"
+    assert tool_blocks[0]["input"] == {"to": "jane@acme.com"}
+    assert body["stop_reason"] == "tool_use"
 
 
 def test_rate_limit():

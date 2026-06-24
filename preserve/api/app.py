@@ -255,19 +255,23 @@ def create_app(settings: Optional[APISettings] = None) -> FastAPI:
     @app.post("/v1/messages")
     def anthropic_messages(req: dict = Body(...),
                            principal: APIKey = Depends(require_key)):
-        """Anthropic Messages API shape: scrub -> OpenAI-compatible upstream -> restore,
-        returning an Anthropic-format response. Text content only for now."""
+        """Anthropic Messages API: scrub -> OpenAI-compatible upstream -> restore,
+        returning Anthropic-format content (text + tool_use), streaming or not."""
         enforce_limits(principal)
-        if req.get("stream"):
-            raise HTTPException(400, "Streaming is not yet supported on /v1/messages; "
-                                     "use /v1/chat/completions for streaming.")
 
         def block_text(content) -> str:
             if isinstance(content, str):
                 return content
             if isinstance(content, list):
-                return "\n".join(b.get("text", "") for b in content
-                                 if isinstance(b, dict) and b.get("type") == "text")
+                parts = []
+                for b in content:
+                    if not isinstance(b, dict):
+                        continue
+                    if b.get("type") == "text":
+                        parts.append(b.get("text", ""))
+                    elif b.get("type") == "tool_result":
+                        parts.append(block_text(b.get("content")))
+                return "\n".join(p for p in parts if p)
             return ""
 
         oai_messages = []
@@ -296,6 +300,96 @@ def create_app(settings: Optional[APISettings] = None) -> FastAPI:
                          ("top_p", "top_p"), ("stop_sequences", "stop")):
             if req.get(src) is not None:
                 params[dst] = req[src]
+        stop_map = {"stop": "end_turn", "length": "max_tokens", "tool_calls": "tool_use"}
+
+        # ---- streaming: translate the OpenAI-compatible upstream stream into
+        # Anthropic SSE events, restoring PII incrementally (hold-back buffer). ----
+        if req.get("stream"):
+            from preserve.api.streaming import PlaceholderStreamRestorer
+
+            def sse(event, data):
+                return f"event: {event}\ndata: {json.dumps(data)}\n\n"
+
+            def event_stream():
+                yield sse("message_start", {"type": "message_start", "message": {
+                    "id": "msg_stream", "type": "message", "role": "assistant", "content": [],
+                    "model": model, "stop_reason": None, "stop_sequence": None,
+                    "usage": {"input_tokens": 0, "output_tokens": 0}}})
+                text_r = PlaceholderStreamRestorer(pmap.restore)
+                tool_r = {}
+                next_index = 0
+                text_idx = None
+                tool_idx = {}
+                stop_reason = "end_turn"
+                out_tokens = 0
+                try:
+                    stream = upstream_client().chat.completions.create(
+                        model=model, messages=sanitized, stream=True, **params)
+                except Exception as e:
+                    logger.warning("upstream stream error: %s", e)
+                    yield sse("error", {"type": "error", "error": {
+                        "type": "api_error", "message": f"Upstream LLM error: {e}"}})
+                    yield sse("message_stop", {"type": "message_stop"})
+                    return
+                for chunk in stream:
+                    d = chunk.model_dump()
+                    for choice in d.get("choices", []):
+                        delta = choice.get("delta") or {}
+                        if choice.get("finish_reason"):
+                            stop_reason = stop_map.get(choice["finish_reason"], "end_turn")
+                        c = delta.get("content")
+                        if isinstance(c, str) and c:
+                            if text_idx is None:
+                                text_idx = next_index
+                                next_index += 1
+                                yield sse("content_block_start", {"type": "content_block_start",
+                                    "index": text_idx, "content_block": {"type": "text", "text": ""}})
+                            emit = text_r.feed(c)
+                            if emit:
+                                yield sse("content_block_delta", {"type": "content_block_delta",
+                                    "index": text_idx, "delta": {"type": "text_delta", "text": emit}})
+                        for tc in (delta.get("tool_calls") or []):
+                            oi = tc.get("index", 0)
+                            fn = tc.get("function") or {}
+                            if oi not in tool_idx:
+                                tool_idx[oi] = next_index
+                                next_index += 1
+                                tool_r[oi] = PlaceholderStreamRestorer(pmap.restore)
+                                yield sse("content_block_start", {"type": "content_block_start",
+                                    "index": tool_idx[oi], "content_block": {"type": "tool_use",
+                                        "id": tc.get("id") or f"toolu_{oi}",
+                                        "name": fn.get("name") or "", "input": {}}})
+                            args = fn.get("arguments")
+                            if isinstance(args, str) and args:
+                                emit = tool_r[oi].feed(args)
+                                if emit:
+                                    yield sse("content_block_delta", {"type": "content_block_delta",
+                                        "index": tool_idx[oi],
+                                        "delta": {"type": "input_json_delta", "partial_json": emit}})
+                    u = d.get("usage")
+                    if u and u.get("completion_tokens"):
+                        out_tokens = u["completion_tokens"]
+                if text_idx is not None:
+                    tail = text_r.flush()
+                    if tail:
+                        yield sse("content_block_delta", {"type": "content_block_delta",
+                            "index": text_idx, "delta": {"type": "text_delta", "text": tail}})
+                    yield sse("content_block_stop", {"type": "content_block_stop", "index": text_idx})
+                for oi, bi in tool_idx.items():
+                    tail = tool_r[oi].flush()
+                    if tail:
+                        yield sse("content_block_delta", {"type": "content_block_delta",
+                            "index": bi, "delta": {"type": "input_json_delta", "partial_json": tail}})
+                    yield sse("content_block_stop", {"type": "content_block_stop", "index": bi})
+                yield sse("message_delta", {"type": "message_delta",
+                    "delta": {"stop_reason": stop_reason, "stop_sequence": None},
+                    "usage": {"output_tokens": out_tokens}})
+                app.state.limiter.add_tokens(principal.key, out_tokens)
+                audit(principal, "messages_stream", summary, out_tokens, model)
+                yield sse("message_stop", {"type": "message_stop"})
+
+            return StreamingResponse(event_stream(), media_type="text/event-stream")
+
         try:
             resp = upstream_client().chat.completions.create(
                 model=model, messages=sanitized, **params,
@@ -306,20 +400,34 @@ def create_app(settings: Optional[APISettings] = None) -> FastAPI:
 
         data = resp.model_dump()
         choice = (data.get("choices") or [{}])[0]
-        text = pmap.restore((choice.get("message") or {}).get("content") or "")
+        msg = choice.get("message") or {}
+        content_blocks = []
+        if isinstance(msg.get("content"), str) and msg["content"]:
+            content_blocks.append({"type": "text", "text": pmap.restore(msg["content"])})
+        for tc in (msg.get("tool_calls") or []):
+            fn = tc.get("function") or {}
+            restored_args = pmap.restore(fn.get("arguments") or "{}")
+            try:
+                tool_input = json.loads(restored_args)
+            except Exception:
+                tool_input = {"_raw": restored_args}
+            content_blocks.append({"type": "tool_use", "id": tc.get("id") or "toolu_0",
+                                   "name": fn.get("name") or "", "input": tool_input})
+        if not content_blocks:
+            content_blocks.append({"type": "text", "text": ""})
+
         usage = data.get("usage") or {}
         tokens = usage.get("total_tokens", 0) or 0
         app.state.limiter.add_tokens(principal.key, tokens)
         audit(principal, "messages", summary, tokens, model)
-
-        stop_map = {"stop": "end_turn", "length": "max_tokens", "tool_calls": "tool_use"}
         return {
             "id": data.get("id", "msg"),
             "type": "message",
             "role": "assistant",
             "model": model,
-            "content": [{"type": "text", "text": text}],
+            "content": content_blocks,
             "stop_reason": stop_map.get(choice.get("finish_reason"), "end_turn"),
+            "stop_sequence": None,
             "usage": {"input_tokens": usage.get("prompt_tokens", 0),
                       "output_tokens": usage.get("completion_tokens", 0)},
             "x_preserve": {"pii_redacted": sum(summary.values()), "by_type": summary},
