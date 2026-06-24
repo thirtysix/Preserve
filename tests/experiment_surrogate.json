@@ -1,0 +1,57 @@
+{
+  "n": 12,
+  "model": "Qwen3.5-4B-Q4_K_M.gguf",
+  "tallies": {
+    "carry_through": {
+      "raw": {
+        "correct": 11,
+        "wrong": 1,
+        "abstain": 0
+      },
+      "placeholder": {
+        "correct": 12,
+        "wrong": 0,
+        "abstain": 0
+      },
+      "surrogate": {
+        "correct": 11,
+        "wrong": 1,
+        "abstain": 0
+      }
+    },
+    "numeric": {
+      "raw": {
+        "correct": 12,
+        "wrong": 0,
+        "abstain": 0
+      },
+      "placeholder": {
+        "correct": 0,
+        "wrong": 12,
+        "abstain": 0
+      },
+      "surrogate": {
+        "correct": 0,
+        "wrong": 12,
+        "abstain": 0
+      }
+    },
+    "date": {
+      "raw": {
+        "correct": 8,
+        "wrong": 4,
+        "abstain": 0
+      },
+      "placeholder": {
+        "correct": 4,
+        "wrong": 8,
+        "abstain": 0
+      },
+      "surrogate": {
+        "correct": 8,
+        "wrong": 4,
+        "abstain": 0
+      }
+    }
+  }
+}
