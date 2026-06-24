@@ -22,10 +22,10 @@ counted as a false positive. Scoring is character-span overlap.
 | Config | Recall | Precision | F1 | F2 |
 | --- | --- | --- | --- | --- |
 | minimal | 46.5% | 91.7% | 0.617 | 0.516 |
-| standard | 58.5% | 88.8% | 0.706 | 0.628 |
-| aggressive | 66.8% | 89.5% | 0.765 | 0.703 |
-| aggressive, no name-scorer | 49.6% | 92.0% | 0.644 | 0.546 |
-| aggressive + NER (spaCy, default labels) | **82.4%** | 88.5% | **0.853** | **0.835** |
+| standard | 64.6% | 89.6% | 0.751 | 0.684 |
+| aggressive | 72.8% | 90.2% | 0.806 | 0.757 |
+| aggressive, no name-scorer | 55.6% | 92.7% | 0.695 | 0.605 |
+| aggressive + NER (spaCy, default labels) | **87.6%** | 89.0% | **0.883** | **0.878** |
 
 Per-category recall (aggressive):
 
@@ -38,9 +38,9 @@ Per-category recall (aggressive):
 | SSN | 87.5% | 14/16 |
 | DATE | 72.4% | 55/76 |
 | NAME | 61.3% | 146/238 |
+| IP | 100.0% | 87/87 |
 | ADDRESS | 56.0% | 70/125 |
 | ACCOUNT | 54.5% | 18/33 |
-| IP | 51.7% | 45/87 |
 
 ## NER label tuning (n=400)
 
@@ -60,14 +60,16 @@ recall gain at near-baseline precision; adding `ORG` buys ~3 more points of reca
 
 ## Takeaways
 
-- **The gazetteer name scorer (Layer 2h) adds about 17 points of recall** (aggressive 66.8%
-  vs 49.6% with it disabled).
+- **Adding IPv6 detection took IP recall from 51.7% to 100%** and lifted overall aggressive
+  recall about 6 points (66.8% to 72.8%). A concrete, corpus-driven fix.
+- **The gazetteer name scorer (Layer 2h) adds about 17 points of recall** (aggressive 72.8%
+  vs 55.6% with it disabled).
 - **spaCy NER (tuned) is a strong, cheap recall lever on real-distribution text**: +15 points
-  (66.8% to 82.4%) for ~1 point of precision, and the best config by F1. It is off by default
+  (72.8% to 87.6%) for ~1 point of precision, and the best config by F1. It is off by default
   (spaCy is an optional extra); enable `use_ner=True` when recall matters more than
   over-redaction.
 - Headline recall is lower than the 99.8% on the bundled clean set because this corpus is
   harder and less keyword-rich. That is the point of an external corpus: a more honest,
   harder test.
-- Weakest categories to improve: IP (IPv6), ADDRESS, ACCOUNT, NAME. These are also where the
+- Weakest categories to improve next: ADDRESS, ACCOUNT, NAME. These are also where the
   optional Layer 3 LLM helps most.
