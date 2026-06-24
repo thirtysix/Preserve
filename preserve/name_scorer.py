@@ -20,6 +20,12 @@ from dataclasses import dataclass
 
 logger = logging.getLogger("preserve.name_scorer")
 
+# Letter ranges covering Latin-1 plus Latin Extended-A (Polish, Turkish, Czech,
+# Romanian, ...) so names like "Stępniak", "Sarı", "İlhan" tokenize fully rather
+# than truncating at the first non-Latin-1 character.
+_UP = "A-ZÀ-ÖØ-ÞĀ-ſ"
+_LO = "a-zà-öø-ÿĀ-ſ"
+
 # Language-specific surname suffixes
 SURNAME_SUFFIXES = re.compile(
     r"(?:nen|la|lä|sto"          # Finnish
@@ -86,12 +92,12 @@ SKIP_TOKENS = {
 
 # Initial + surname pattern: "J. Smith", "A. Rossi", "Mr. V"
 INITIAL_SURNAME = re.compile(
-    r"\b([A-ZÀ-ÖØ-Þ])\.\s*([A-ZÀ-ÖØ-Þ][a-zà-öø-ÿ]{2,})\b"
+    rf"\b([{_UP}])\.\s*([{_UP}][{_LO}]{{2,}})\b"
 )
 
 # Parenthetical name reveal: "Mr. V (Virtanen)"
 PAREN_NAME = re.compile(
-    r"\b([A-ZÀ-ÖØ-Þa-zà-öø-ÿ]+)\s*\(([A-ZÀ-ÖØ-Þ][a-zà-öø-ÿ]+)\)"
+    rf"\b([{_UP}{_LO}]+)\s*\(([{_UP}][{_LO}]+)\)"
 )
 
 
@@ -200,7 +206,7 @@ class HybridNameScorer:
         candidates: list[NameCandidate] = []
 
         # Tokenize all words (including lowercase)
-        words = list(re.finditer(r"\b([a-zA-ZÀ-ÖØ-Þà-öø-ÿ]{2,})\b", text))
+        words = list(re.finditer(rf"\b([{_UP}{_LO}]{{2,}})\b", text))
 
         for i in range(len(words) - 1):
             w1 = words[i]
@@ -327,7 +333,7 @@ class HybridNameScorer:
         candidates: list[NameCandidate] = []
         all_keywords = self._TITLE_WORDS | self._NAME_INTRO_WORDS
 
-        words = list(re.finditer(r"\b([a-zA-ZÀ-ÖØ-Þà-öø-ÿ]{2,})\b", text))
+        words = list(re.finditer(rf"\b([{_UP}{_LO}]{{2,}})\b", text))
 
         for i, w in enumerate(words):
             token = w.group().lower()
@@ -424,7 +430,7 @@ class HybridNameScorer:
         """Find capitalized words including hyphenated names."""
         results = []
         for m in re.finditer(
-            r"\b([A-ZÀ-ÖØ-Þ][a-zà-öø-ÿ]+(?:-[A-ZÀ-ÖØ-Þa-zà-öø-ÿ]+)*)\b", text
+            rf"\b([{_UP}][{_LO}]+(?:-[{_UP}{_LO}]+)*)\b", text
         ):
             results.append((m.start(), m.end(), m.group()))
         return results

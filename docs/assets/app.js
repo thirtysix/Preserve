@@ -204,10 +204,10 @@
   ]);
   const SURNAME_SUFFIX = /(?:nen|la|lä|sto|son|sen|ström|berg|lund|qvist|ez|az|ov|ova|ski|ska|vich|enko|ian|yan|ou|is|os|ić|ović)$/i;
   const NAME_CTX_BEFORE = /(?:patient|client|employee|name|contact|witness|supervisor|manager|doctor|nurse|attorney|signed by|referred by|mr|mrs|ms|miss|dr|prof|wife|husband|spouse|mother|father|son|daughter|caller|attendee|participant|sender|recipient|pt|emp|attn|fwd|re|cc)\s*[:.\s]?\s*$/i;
-  const CAP_TOKEN = /[A-ZÀ-ÖØ-Þ][a-zà-öø-ÿ]+(?:-[A-ZÀ-ÖØ-Þa-zà-öø-ÿ]+)*/g;
-  const WORD_TOKEN = /[a-zA-ZÀ-ÖØ-Þà-öø-ÿ]{2,}/g;
-  const INITIAL_SURNAME = /([A-ZÀ-ÖØ-Þ])\.\s*([A-ZÀ-ÖØ-Þ][a-zà-öø-ÿ]{2,})/g;
-  const PAREN_NAME = /([A-ZÀ-ÖØ-Þa-zà-öø-ÿ]+)\s*\(([A-ZÀ-ÖØ-Þ][a-zà-öø-ÿ]+)\)/g;
+  const CAP_TOKEN = /[A-ZÀ-ÖØ-ÞĀ-ſ][a-zà-öø-ÿĀ-ſ]+(?:-[A-ZÀ-ÖØ-ÞĀ-ſa-zà-öø-ÿĀ-ſ]+)*/g;
+  const WORD_TOKEN = /[a-zA-ZÀ-ÖØ-ÞĀ-ſà-öø-ÿ]{2,}/g;
+  const INITIAL_SURNAME = /([A-ZÀ-ÖØ-ÞĀ-ſ])\.\s*([A-ZÀ-ÖØ-ÞĀ-ſ][a-zà-öø-ÿĀ-ſ]{2,})/g;
+  const PAREN_NAME = /([A-ZÀ-ÖØ-ÞĀ-ſa-zà-öø-ÿĀ-ſ]+)\s*\(([A-ZÀ-ÖØ-ÞĀ-ſ][a-zà-öø-ÿĀ-ſ]+)\)/g;
 
   function scoreNameTokens(tokens, text, start) {
     let score = 0;
