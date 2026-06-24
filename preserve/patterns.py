@@ -649,6 +649,32 @@ INTL_PHONE = PIIPattern(
 )
 
 # Ordered by specificity (more specific patterns first to avoid partial matches)
+MONTH_NAME_DATE = PIIPattern(
+    name="month_name_date",
+    regex=re.compile(
+        r"\b(?:\d{1,2}(?:st|nd|rd|th)?\s+)?"
+        r"(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?"
+        r"|Aug(?:ust)?|Sep(?:t(?:ember)?)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)"
+        r"(?:\s+\d{1,2}(?:st|nd|rd|th)?)?,?\s+(?:18|19|20)\d{2}\b",
+        re.IGNORECASE,
+    ),
+    min_sensitivity=SensitivityLevel.STANDARD,
+    description="Dates written with a month name and year (14 June 1994, June 14, 2020)",
+    replacement_type="DATE",
+)
+
+SECONDARY_ADDRESS = PIIPattern(
+    name="secondary_address",
+    regex=re.compile(
+        r"\b(?:Apt|Apartment|Suite|Ste|Unit|Rm|Room|Fl|Floor|Bldg|Building)\.?\s*#?\s*\d{1,5}[A-Za-z]?\b",
+        re.IGNORECASE,
+    ),
+    min_sensitivity=SensitivityLevel.AGGRESSIVE,
+    description="Secondary address units (Apt. 259, Suite 786, Unit 4)",
+    replacement_type="ADDRESS",
+)
+
+
 # --- Secrets / credentials (prevent leaking API keys, tokens, keys to an LLM) ---
 
 AWS_ACCESS_KEY = PIIPattern(
@@ -773,6 +799,8 @@ ALL_PATTERNS: list[PIIPattern] = [
     INTL_PHONE,
     IP_ADDRESS,
     IP_ADDRESS_V6,
+    MONTH_NAME_DATE,
+    SECONDARY_ADDRESS,
     # Secrets / credentials
     AWS_ACCESS_KEY,
     GITHUB_TOKEN,

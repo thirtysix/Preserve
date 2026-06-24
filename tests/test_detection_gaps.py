@@ -34,6 +34,29 @@ def test_ipv6_no_false_positive(scrub, text):
     assert _types(scrub(text), "IP") == [], f"false IPv6 in {text!r}"
 
 
+@pytest.mark.parametrize("text,expected", [
+    ("by letter of 14 June 1994 the police", "14 June 1994"),
+    ("born February 4, 1909 in Oslo", "February 4, 1909"),
+    ("the deadline is June 2020", "June 2020"),
+])
+def test_month_name_dates(scrub, text, expected):
+    dates = _types(scrub(text), "DATE")
+    assert any(expected in d for d in dates), f"missed month-date in {text!r}: {dates}"
+
+
+def test_month_name_date_requires_year(scrub):
+    # No year -> not flagged (avoids "in June", "next September").
+    assert _types(scrub("let's meet in June next year"), "DATE") == []
+
+
+def test_secondary_address_units(scrub):
+    for text, exp in [("accommodations at Apt. 259 starting", "Apt. 259"),
+                      ("event held at Suite 786", "Suite 786"),
+                      ("move to Unit 4B", "Unit 4B")]:
+        addrs = _types(scrub(text), "ADDRESS")
+        assert any(exp in a for a in addrs), f"missed {exp!r}: {addrs}"
+
+
 def test_address_alphanumeric_house_number(scrub):
     addrs = _types(scrub("lives at 221B Baker Street, London"), "ADDRESS")
     assert any("221B Baker Street" in a for a in addrs), addrs
