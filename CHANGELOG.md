@@ -4,6 +4,31 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project aims to follow
 semantic versioning.
 
+## [0.5.2] - 2026-06-24
+
+Error analysis on real corpora (TAB ECHR court cases, Enron email) plus synthetic
+ai4privacy drove a precision + recall pass. New tool: `scripts/analyze_corpus.py`.
+
+### Fixed (precision)
+- `bank_contextual` no longer fires inside words ("accountant", "bankruptcy") or
+  captures arbitrary trailing text; it now requires a digit-led, account-number-like
+  value. FINANCIAL false positives essentially eliminated (Enron 417 -> 2, TAB ~798 -> 0).
+- Relative/fuzzy date references ("tomorrow", "yesterday", "3 years", "one year after")
+  and runaway spans are no longer tagged as dates of birth (DOB false positives roughly
+  halved on Enron; ~99% cut on ai4privacy).
+
+### Added (recall)
+- International names: the name tokenizer now spans Latin Extended-A (Polish, Turkish,
+  Czech, ...), recovering names like "Sarı", "Çolak", "İlhan Karakurt", "Stępniak"
+  (TAB NAME recall 65.9% -> 71.5%).
+- Month-name dates ("14 June 1994", "February 4, 1909"), year-anchored to stay precise.
+- Secondary-address units ("Apt. 259", "Suite 786", "Unit 4B") (ADDRESS recall on
+  ai4privacy 54.9% -> 74.7%).
+
+### Changed
+- Tightening `bank_contextual` for precision slightly lowers bare ACCOUNT-number recall;
+  net positive given the false-positive elimination.
+
 ## [0.5.1] - 2026-06-24
 
 ### Fixed
