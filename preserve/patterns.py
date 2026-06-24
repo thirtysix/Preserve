@@ -605,8 +605,8 @@ BANK_CONTEXTUAL = PIIPattern(
     regex=re.compile(
         # Word-bounded keyword (so it doesn't fire inside "accountant"/"bankrupt"),
         # then a digit-led, account-number-like value (not arbitrary words).
-        r"\b(?:bank|branch|acct|account|routing|BSB|sort\s*code)\b\s*"
-        r"(?:#|number|no\.?|code)?[:\s#]*"
+        r"\b(?:bank|branch|acct|account|routing|BSB|sort\s*code)\b"
+        r"[\s:#()\-]*(?:#|number|no\.?|code)?[\s:#()\-]*"
         r"(\d[\d\s\-]{4,20}\d)",
         re.IGNORECASE,
     ),

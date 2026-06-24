@@ -74,6 +74,16 @@ def test_secondary_address_units(scrub):
         assert any(exp in a for a in addrs), f"missed {exp!r}: {addrs}"
 
 
+@pytest.mark.parametrize("text,expected", [
+    ("Home Loan Account account (No. 53977069).", "53977069"),
+    ("account number 31382700 was used", "31382700"),
+    ("routing number 021000021", "021000021"),
+])
+def test_account_contextual_recovers_worded_forms(scrub, text, expected):
+    fin = _types(scrub(text), "FINANCIAL")
+    assert any(expected in f for f in fin), f"missed account in {text!r}: {fin}"
+
+
 def test_address_alphanumeric_house_number(scrub):
     addrs = _types(scrub("lives at 221B Baker Street, London"), "ADDRESS")
     assert any("221B Baker Street" in a for a in addrs), addrs

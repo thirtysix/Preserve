@@ -584,7 +584,7 @@ window.PRESERVE_PATTERNS = [
   },
   {
     "name": "bank_contextual",
-    "source": "\\b(?:bank|branch|acct|account|routing|BSB|sort\\s*code)\\b\\s*(?:#|number|no\\.?|code)?[:\\s#]*(\\d[\\d\\s\\-]{4,20}\\d)",
+    "source": "\\b(?:bank|branch|acct|account|routing|BSB|sort\\s*code)\\b[\\s:#()\\-]*(?:#|number|no\\.?|code)?[\\s:#()\\-]*(\\d[\\d\\s\\-]{4,20}\\d)",
     "flags": "i",
     "group": 1,
     "sensitivity": "standard",
