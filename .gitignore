@@ -16,3 +16,4 @@ nextsession.md
 build/
 dist/
 tests/corpus_results.json
+tests/corpus_errors*.json
