@@ -144,7 +144,7 @@ window.PRESERVE_PATTERNS = [
   },
   {
     "name": "date_of_birth",
-    "source": "\\b(?:DOB|D\\.O\\.B\\.?|date of birth|born|birthday)[:\\s]*(\\d{1,2}[/-]\\d{1,2}[/-]\\d{2,4})\\b",
+    "source": "\\b(?:DOB|D\\.O\\.B\\.?|date of birth|born|birthday)[:\\s]*(\\d{1,2}[./-]\\d{1,2}[./-]\\d{2,4})\\b",
     "flags": "i",
     "group": 1,
     "sensitivity": "standard",
@@ -664,12 +664,12 @@ window.PRESERVE_PATTERNS = [
   },
   {
     "name": "date_generic",
-    "source": "\\b(?:0[1-9]|1[0-2])[/-](?:0[1-9]|[12]\\d|3[01])[/-](?:19|20)\\d{2}\\b",
+    "source": "\\b\\d{1,2}[./-]\\d{1,2}[./-](?:19|20)\\d{2}\\b",
     "flags": "",
     "group": 0,
     "sensitivity": "aggressive",
     "replacement_type": "DATE",
-    "description": "Generic dates in MM/DD/YYYY or MM-DD-YYYY format",
+    "description": "Generic numeric dates with /, - or . separators and a 4-digit year (D.M.YYYY, M/D/YYYY)",
     "has_validator": false
   }
 ];

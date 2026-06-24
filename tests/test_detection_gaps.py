@@ -44,6 +44,23 @@ def test_month_name_dates(scrub, text, expected):
     assert any(expected in d for d in dates), f"missed month-date in {text!r}: {dates}"
 
 
+@pytest.mark.parametrize("text,expected", [
+    ("DOB: 15.3.1990", "15.3.1990"),
+    ("born 15.3.1990 in Helsinki", "15.3.1990"),
+    ("the incident on 1.12.2020 was logged", "1.12.2020"),
+])
+def test_dot_separated_dates(scrub, text, expected):
+    dates = _types(scrub(text), "DOB") + _types(scrub(text), "DATE")
+    assert any(expected in d for d in dates), f"missed dot date in {text!r}: {dates}"
+
+
+def test_version_and_ip_not_dates(scrub):
+    # No 4-digit year -> not a date; IPs stay IPs.
+    for text in ("upgraded to version 1.2.3 today", "server at 192.168.1.1 responded"):
+        assert not any(d.replacement_type in ("DOB", "DATE") for d in scrub(text).detections), \
+            f"version/IP -> date in {text!r}"
+
+
 def test_month_name_date_requires_year(scrub):
     # No year -> not flagged (avoids "in June", "next September").
     assert _types(scrub("let's meet in June next year"), "DATE") == []

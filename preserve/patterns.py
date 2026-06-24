@@ -88,7 +88,7 @@ DATE_OF_BIRTH = PIIPattern(
     name="date_of_birth",
     regex=re.compile(
         r"\b(?:DOB|D\.O\.B\.?|date of birth|born|birthday)[:\s]*"
-        r"(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})\b",
+        r"(\d{1,2}[./-]\d{1,2}[./-]\d{2,4})\b",
         re.IGNORECASE,
     ),
     min_sensitivity=SensitivityLevel.STANDARD,
@@ -99,10 +99,10 @@ DATE_OF_BIRTH = PIIPattern(
 DATE_GENERIC = PIIPattern(
     name="date_generic",
     regex=re.compile(
-        r"\b(?:0[1-9]|1[0-2])[/-](?:0[1-9]|[12]\d|3[01])[/-](?:19|20)\d{2}\b"
+        r"\b\d{1,2}[./-]\d{1,2}[./-](?:19|20)\d{2}\b"
     ),
     min_sensitivity=SensitivityLevel.AGGRESSIVE,
-    description="Generic dates in MM/DD/YYYY or MM-DD-YYYY format",
+    description="Generic numeric dates with /, - or . separators and a 4-digit year (D.M.YYYY, M/D/YYYY)",
     replacement_type="DATE",
 )
 
