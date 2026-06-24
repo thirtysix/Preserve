@@ -20,7 +20,7 @@ from pathlib import Path
 from typing import Optional
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from openai import OpenAI
 
 from preserve.api.models import (
@@ -143,9 +143,6 @@ def create_app(settings: Optional[APISettings] = None) -> FastAPI:
     @app.post("/v1/chat/completions")
     def chat_completions(req: ChatCompletionRequest,
                          principal: APIKey = Depends(require_key)):
-        if req.stream:
-            raise HTTPException(400, "Streaming is not supported "
-                                     "(PII restoration needs the full response).")
         enforce_limits(principal)
 
         messages = [m.model_dump(exclude_none=True) for m in req.messages]
@@ -161,6 +158,65 @@ def create_app(settings: Optional[APISettings] = None) -> FastAPI:
             summary[d.replacement_type] = summary.get(d.replacement_type, 0) + 1
 
         model = req.model or settings.default_model
+
+        if req.stream:
+            from preserve.api.streaming import PlaceholderStreamRestorer
+            passthrough = req.passthrough_params()
+
+            def event_stream():
+                content_r = PlaceholderStreamRestorer(pmap.restore)
+                tool_rs: dict[int, PlaceholderStreamRestorer] = {}
+                total_tokens = 0
+                chunk_id = "chatcmpl-stream"
+                try:
+                    stream = upstream_client().chat.completions.create(
+                        model=model, messages=sanitized, stream=True, **passthrough,
+                    )
+                except Exception as e:
+                    logger.warning("upstream stream error: %s", e)
+                    yield "data: " + json.dumps(
+                        {"error": {"message": f"Upstream LLM error: {e}", "type": "upstream_error"}}
+                    ) + "\n\n"
+                    yield "data: [DONE]\n\n"
+                    return
+                for chunk in stream:
+                    d = chunk.model_dump()
+                    chunk_id = d.get("id") or chunk_id
+                    for choice in d.get("choices", []):
+                        delta = choice.get("delta") or {}
+                        if isinstance(delta.get("content"), str):
+                            delta["content"] = content_r.feed(delta["content"])
+                        for tc in (delta.get("tool_calls") or []):
+                            fn = tc.get("function") or {}
+                            if isinstance(fn.get("arguments"), str):
+                                r = tool_rs.setdefault(
+                                    tc.get("index", 0), PlaceholderStreamRestorer(pmap.restore))
+                                fn["arguments"] = r.feed(fn["arguments"])
+                    u = d.get("usage")
+                    if u and u.get("total_tokens"):
+                        total_tokens = u["total_tokens"]
+                    yield "data: " + json.dumps(d) + "\n\n"
+                # Emit any held-back tail (an unfinished placeholder that never completed)
+                tail = content_r.flush()
+                tool_tails = {i: r.flush() for i, r in tool_rs.items()}
+                if tail or any(tool_tails.values()):
+                    delta = {}
+                    if tail:
+                        delta["content"] = tail
+                    tcs = [{"index": i, "function": {"arguments": t}}
+                           for i, t in tool_tails.items() if t]
+                    if tcs:
+                        delta["tool_calls"] = tcs
+                    yield "data: " + json.dumps({
+                        "id": chunk_id, "object": "chat.completion.chunk", "model": model,
+                        "choices": [{"index": 0, "delta": delta, "finish_reason": None}]}) + "\n\n"
+                if total_tokens:
+                    app.state.limiter.add_tokens(principal.key, total_tokens)
+                audit(principal, "chat_completions_stream", summary, total_tokens, model)
+                yield "data: [DONE]\n\n"
+
+            return StreamingResponse(event_stream(), media_type="text/event-stream")
+
         try:
             resp = upstream_client().chat.completions.create(
                 model=model, messages=sanitized, **req.passthrough_params(),

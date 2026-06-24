@@ -142,12 +142,45 @@ def test_chat_completions_restores_tool_call_args():
     assert "jane@acme.com" in args and "[EMAIL_1]" not in args
 
 
-def test_streaming_rejected():
-    client, _ = make_client()
+def test_streaming_restores_split_placeholder():
+    client, fake = make_client()
+
+    def fake_create(model, messages, stream=False, **kw):
+        assert stream is True
+        # The placeholder [EMAIL_1] is split across fragments.
+        frags = ["Sure, ", "I'll write to [EMA", "IL_1]", " now."]
+
+        def gen():
+            for fr in frags:
+                yield types.SimpleNamespace(model_dump=lambda fr=fr: {
+                    "id": "chatcmpl-s", "object": "chat.completion.chunk", "model": model,
+                    "choices": [{"index": 0, "delta": {"content": fr}, "finish_reason": None}],
+                })
+        return gen()
+    fake.chat.completions.create = fake_create
+
     r = client.post("/v1/chat/completions", json={
-        "messages": [{"role": "user", "content": "hi"}], "stream": True,
+        "model": "test-model", "stream": True,
+        "messages": [{"role": "user", "content": "Email jane@acme.com about it"}],
     }, headers=AUTH)
-    assert r.status_code == 400
+    assert r.status_code == 200
+    body = r.text
+
+    content = ""
+    for line in body.splitlines():
+        if line.startswith("data: "):
+            payload = line[6:].strip()
+            if payload == "[DONE]":
+                continue
+            obj = __import__("json").loads(payload)
+            for ch in obj.get("choices", []):
+                c = (ch.get("delta") or {}).get("content")
+                if c:
+                    content += c
+    # Upstream got scrubbed text; client gets restored, never a partial/placeholder
+    assert content == "Sure, I'll write to jane@acme.com now."
+    assert "[EMAIL_1]" not in body and "[EMA" not in body
+    assert body.strip().endswith("data: [DONE]")
 
 
 def test_rate_limit():

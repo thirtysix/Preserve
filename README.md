@@ -528,7 +528,10 @@ dashboard.py           # Gradio web dashboard (all layers)
 
 - **Single common-word names** ("Kim", "Grace" alone) may not be detected without context.
 - **Deliberately redacted data** ("SSN ending in 6789") is partially detected.
-- **Streaming** responses are not yet supported.
+- **Streaming** is supported on the gateway (`stream=true`): placeholders are restored
+  incrementally with hold-back buffering so a token split across chunks is never emitted
+  half-restored. Token-based quota accounting requires the client to request usage
+  (`stream_options={"include_usage": true}`).
 - **Browser demo** covers the deterministic layers (regex, checksums, context scoring) and a compact name gazetteer that catches bare names across 55 countries; the complete names-dataset and the local LLM (for the hardest cases) need the Python package.
 
 ## License
