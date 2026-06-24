@@ -63,6 +63,27 @@ IP_ADDRESS = PIIPattern(
     replacement_type="IP",
 )
 
+IP_ADDRESS_V6 = PIIPattern(
+    name="ip_address_v6",
+    regex=re.compile(
+        r"(?<![\w:])(?:"
+        r"(?:[A-Fa-f0-9]{1,4}:){7}[A-Fa-f0-9]{1,4}"                      # full
+        r"|(?:[A-Fa-f0-9]{1,4}:){1,7}:"                                   # 1::, 1:2::
+        r"|(?:[A-Fa-f0-9]{1,4}:){1,6}:[A-Fa-f0-9]{1,4}"
+        r"|(?:[A-Fa-f0-9]{1,4}:){1,5}(?::[A-Fa-f0-9]{1,4}){1,2}"
+        r"|(?:[A-Fa-f0-9]{1,4}:){1,4}(?::[A-Fa-f0-9]{1,4}){1,3}"
+        r"|(?:[A-Fa-f0-9]{1,4}:){1,3}(?::[A-Fa-f0-9]{1,4}){1,4}"
+        r"|(?:[A-Fa-f0-9]{1,4}:){1,2}(?::[A-Fa-f0-9]{1,4}){1,5}"
+        r"|[A-Fa-f0-9]{1,4}:(?::[A-Fa-f0-9]{1,4}){1,6}"
+        r"|:(?:(?::[A-Fa-f0-9]{1,4}){1,7}|:)"                             # ::, ::1
+        r"|::(?:ffff(?::0{1,4})?:)?(?:(?:25[0-5]|2[0-4]\d|1?\d?\d)\.){3}(?:25[0-5]|2[0-4]\d|1?\d?\d)"  # ::ffff:1.2.3.4
+        r")(?:%[0-9A-Za-z]+)?(?![\w:])",                                  # optional zone id
+    ),
+    min_sensitivity=SensitivityLevel.STANDARD,
+    description="IPv6 addresses (full and compressed forms, incl. IPv4-mapped and zone id)",
+    replacement_type="IP",
+)
+
 DATE_OF_BIRTH = PIIPattern(
     name="date_of_birth",
     regex=re.compile(
@@ -88,7 +109,7 @@ DATE_GENERIC = PIIPattern(
 US_ADDRESS = PIIPattern(
     name="us_address",
     regex=re.compile(
-        r"\b\d{1,5}\s+(?:[A-Z][a-z]+\s*){1,4}"
+        r"\b\d{1,5}[A-Za-z]?\s+(?:[A-Z][a-z]+\s*){1,4}"
         r"(?:Street|St|Avenue|Ave|Boulevard|Blvd|Drive|Dr|Lane|Ln|Road|Rd|Court|Ct|Way|Place|Pl|Terrace|Ter|Circle|Cir|Trail|Trl|Parkway|Pkwy|Commons|Square|Sq|Loop|Alley|Aly)"
         r"\.?\b",
         re.IGNORECASE,
@@ -114,7 +135,7 @@ INTL_ADDRESS = PIIPattern(
         r")\s+"
         r"(?:(?:de|del|della|delle|di|du|des|la|las|los|el|da|das|do)\s+)*"  # articles
         r"(?:[A-ZÀ-ÖØ-Þa-zà-öø-ÿ]+\s*){0,4}"       # street name words
-        r"\d{1,5}\b",                                  # house number at end
+        r"\d{1,5}[A-Za-z]?\b",                         # house number at end (optional letter)
         re.IGNORECASE,
     ),
     min_sensitivity=SensitivityLevel.AGGRESSIVE,
@@ -126,7 +147,7 @@ INTL_ADDRESS_NUM_FIRST = PIIPattern(
     name="intl_address_num_first",
     regex=re.compile(
         # Pattern: number + street name (English/French style)
-        r"\b\d{1,5}\s+"
+        r"\b\d{1,5}[A-Za-z]?\s+"
         r"(?:(?:de|del|du|des|la|las|los)\s+)*"
         r"(?:[A-ZÀ-ÖØ-Þ][a-zà-öø-ÿ]+\s*){1,4}"
         r"(?:Street|St|Avenue|Ave|Boulevard|Blvd|Drive|Dr|Lane|Ln|Road|Rd|"
@@ -650,6 +671,7 @@ ALL_PATTERNS: list[PIIPattern] = [
     FRANCE_PHONE,
     INTL_PHONE,
     IP_ADDRESS,
+    IP_ADDRESS_V6,
     US_DRIVERS_LICENSE,
     HEALTH_INSURANCE_ID,
     NPI_NUMBER,
