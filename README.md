@@ -4,7 +4,7 @@ Privacy-preserving PII detection and scrubbing for LLM inference queries. Preser
 
 - **Local-first:** detection runs on your machine; nothing is sent to scrub PII.
 - **Reversible:** every redaction maps to a placeholder (`[NAME_1]`) and restores exactly.
-- **International:** 49+ regex patterns and 9 checksum validators across 15+ countries.
+- **International:** 60+ regex patterns and 9 checksum validators across 15+ countries, plus secrets (API keys, tokens).
 - **Layered:** fast deterministic detection, with an optional local LLM for the hard cases.
 
 [![PyPI](https://img.shields.io/pypi/v/preserve-pii.svg)](https://pypi.org/project/preserve-pii/)
@@ -125,7 +125,7 @@ Layer 1: NORMALCY SCANNER
     │   Scores text regions by how "normal" they look
     ▼
 Layer 2: DETECTION PIPELINE
-    ├── 2a: Regex (49+ patterns, 13+ countries)
+    ├── 2a: Regex (60+ patterns, 15+ countries, secrets)
     ├── 2b: Domain parsers (phonenumbers, email-validator, dateparser)
     ├── 2c: Checksum validation (Luhn, IBAN, HETU, DNI, CPF, BSN, NHS, RRN)
     ├── 2d: Context-aware confidence scoring
@@ -324,11 +324,11 @@ cp .env.example .env   # set PRESERVE_UPSTREAM_API_KEY + PRESERVE_API_KEYS
 docker compose up --build -d   # API on 127.0.0.1:8800 + Redis; put TLS proxy in front
 ```
 
-## International PII Coverage (49+ patterns)
+## PII and Secret Coverage (60+ patterns)
 
 | Region | Identifiers |
 | --- | --- |
-| US | SSN, ITIN, email, passport, credit card, phone, IP, DOB, address, ZIP, MRN, DEA, NPI, EIN, driver's license, insurance ID |
+| US | SSN, ITIN, email, passport, credit card, phone, IPv4/IPv6, DOB, address, ZIP, MRN, DEA, NPI, EIN, driver's license, insurance ID |
 | UK | NINO, NHS number, phone |
 | Finland | HETU, Y-tunnus, veronumero, phone, addresses (-katu, -tie) |
 | Canada | SIN, provincial health cards |
@@ -343,6 +343,7 @@ docker compose up --build -d   # API on 127.0.0.1:8800 + Redis; put TLS proxy in
 | Japan | My Number |
 | Netherlands | BSN, addresses (-gracht, -straat) |
 | Banking | IBAN, SWIFT/BIC, context-based account numbers |
+| Secrets | API keys (AWS, GitHub, OpenAI, Anthropic, Google, Slack, Stripe), JWTs, PEM private keys, DB connection strings |
 | Names | Hybrid scorer (gazetteer + word frequency + context), handles lowercase and 15+ countries |
 
 ## Messy Input Handling
@@ -495,7 +496,7 @@ python tests/test_against_dataset.py    # Per-column rates: isolated lower-bound
 ```
 preserve/              # Core library
   config.py            # Configuration
-  patterns.py          # 49+ regex patterns (13+ countries)
+  patterns.py          # 60+ regex patterns (15+ countries + secrets)
   detectors.py         # Three-layer detection engine
   name_scorer.py       # Hybrid name detection (names-dataset + wordfreq)
   domain_parsers.py    # phonenumbers, email-validator, dateparser

@@ -36,6 +36,11 @@ window.PRESERVE_EXAMPLES = {
   "Custom ID (rules miss it)": (
     "Quote your case reference MEX-2345-6789 when you call back."
   ),
+  "Secrets / API keys": (
+    "Deploy note: GitHub token " + "ghp_" + "abcdefghijklmnopqrstuvwxyz0123456789AB" +
+    ", AWS key " + "AKIA" + "IOSFODNN7EXAMPLE" + ", db " + "postgresql://" + "app:" +
+    "s3cr3tpw" + "@db.host:5432/main. Ping ops@example.com if it breaks."
+  ),
   "Safe text: no PII": (
     "The algorithm processes data in parallel using 8 threads across the CPU cores. " +
     "Version 4.2 includes improved performance metrics and better error handling."
