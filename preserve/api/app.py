@@ -170,11 +170,19 @@ def create_app(settings: Optional[APISettings] = None) -> FastAPI:
             raise HTTPException(502, f"Upstream LLM error: {e}")
 
         data = resp.model_dump()
-        # Restore PII in every choice's message content
+        # Restore PII in each choice's message content AND any tool/function call
+        # arguments (placeholders can appear inside the JSON argument string).
         for choice in data.get("choices", []):
             msg = choice.get("message") or {}
             if isinstance(msg.get("content"), str):
                 msg["content"] = pmap.restore(msg["content"])
+            for tc in (msg.get("tool_calls") or []):
+                fn = tc.get("function") or {}
+                if isinstance(fn.get("arguments"), str):
+                    fn["arguments"] = pmap.restore(fn["arguments"])
+            fc = msg.get("function_call")
+            if isinstance(fc, dict) and isinstance(fc.get("arguments"), str):
+                fc["arguments"] = pmap.restore(fc["arguments"])
 
         tokens = (data.get("usage") or {}).get("total_tokens", 0) or 0
         daily = app.state.limiter.add_tokens(principal.key, tokens)

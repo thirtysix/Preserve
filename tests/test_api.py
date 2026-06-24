@@ -117,6 +117,31 @@ def test_chat_completions_scrubs_then_restores():
     assert body["x_preserve"]["by_type"]["EMAIL"] == 1
 
 
+def test_chat_completions_restores_tool_call_args():
+    client, fake = make_client()
+
+    def fake_create(model, messages, **kw):
+        # Upstream returns a tool call whose arguments reference the placeholder.
+        return types.SimpleNamespace(model_dump=lambda: {
+            "id": "chatcmpl-tc", "model": model,
+            "choices": [{"index": 0, "finish_reason": "tool_calls", "message": {
+                "role": "assistant", "content": None,
+                "tool_calls": [{"id": "call_1", "type": "function", "function": {
+                    "name": "send_email", "arguments": '{"to": "[EMAIL_1]"}'}}],
+            }}],
+            "usage": {"total_tokens": 10},
+        })
+    fake.chat.completions.create = fake_create
+
+    r = client.post("/v1/chat/completions", json={
+        "model": "test-model",
+        "messages": [{"role": "user", "content": "Email jane@acme.com about the invoice"}],
+    }, headers=AUTH)
+    assert r.status_code == 200
+    args = r.json()["choices"][0]["message"]["tool_calls"][0]["function"]["arguments"]
+    assert "jane@acme.com" in args and "[EMAIL_1]" not in args
+
+
 def test_streaming_rejected():
     client, _ = make_client()
     r = client.post("/v1/chat/completions", json={
