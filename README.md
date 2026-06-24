@@ -16,7 +16,7 @@ Privacy-preserving PII detection and scrubbing for LLM inference queries. Preser
 
 A browser-based demo of the **deterministic** detection layer (regex + checksum validation) runs entirely client-side; no data leaves your browser:
 
-**→ https://thirtysix.github.io/Preserve/** *(enabled when the repository is public)*
+**→ https://thirtysix.github.io/Preserve/**
 
 The demo also runs a compact build of the gazetteer name scorer, so it catches bare names across 55 countries. The Python package adds the full name scorer (the complete names-dataset) and the optional local LLM review described below.
 
@@ -455,7 +455,7 @@ it via `ner_labels=[..., "ORG"]` only if you want maximum recall). Full numbers 
 
 ## Dashboards
 
-**Browser demo (static, deterministic only):** open `docs/index.html` locally, or visit the [live demo](https://thirtysix.github.io/Preserve/) once the repo is public. Runs regex + checksum detection and a compact name gazetteer (55 countries) 100% client-side.
+**Browser demo (static, deterministic only):** open `docs/index.html` locally, or visit the [live demo](https://thirtysix.github.io/Preserve/). Runs regex + checksum detection and a compact name gazetteer (55 countries) 100% client-side.
 
 **Full Gradio app (all layers):**
 
