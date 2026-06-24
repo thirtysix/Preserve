@@ -4,7 +4,7 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project aims to follow
 semantic versioning.
 
-## [Unreleased]
+## [0.6.0] - 2026-06-24
 
 ### Added
 - Anthropic `/v1/messages` now supports **streaming** (`stream=true`, Anthropic-format SSE
