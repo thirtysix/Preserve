@@ -4,6 +4,27 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project aims to follow
 semantic versioning.
 
+## [Unreleased]
+
+### Added
+- **IPv6 detection** (full, compressed, IPv4-mapped, zone id) and alphanumeric house
+  numbers, taking corpus IP recall from 52% to 100% and overall aggressive recall from
+  66.8% to 72.8%.
+- **Secrets / credential detection** (new `SECRET` type): AWS access keys, GitHub tokens,
+  OpenAI / Anthropic / Google / Slack / Stripe keys, JWTs, PEM private-key blocks, database
+  connection URIs with embedded credentials, and a keyword-gated generic secret assignment.
+- **Gateway streaming**: `stream=true` on `/v1/chat/completions` with placeholder-aware
+  hold-back so a token split across chunks is never emitted half-restored.
+- **Anthropic-compatible endpoint** `/v1/messages` (scrub -> OpenAI-compatible upstream ->
+  restore, in the Anthropic request/response shape).
+- Configurable spaCy NER labels (`ner_labels`); large-corpus eval mode
+  (`scripts/eval.py --corpus ai4privacy`); a representation A/B experiment
+  (`scripts/experiment_surrogate.py`).
+
+### Fixed
+- Gateway now restores PII inside tool-call / function-call arguments (previously only the
+  string message content was restored).
+
 ## [0.4.0] - 2026-06-23
 
 ### Added

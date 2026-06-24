@@ -19,7 +19,7 @@ import time
 from pathlib import Path
 from typing import Optional
 
-from fastapi import Depends, FastAPI, Header, HTTPException, Request
+from fastapi import Body, Depends, FastAPI, Header, HTTPException, Request
 from fastapi.responses import JSONResponse, StreamingResponse
 from openai import OpenAI
 
@@ -251,6 +251,79 @@ def create_app(settings: Optional[APISettings] = None) -> FastAPI:
             "daily_tokens_used": daily,
         }
         return data
+
+    @app.post("/v1/messages")
+    def anthropic_messages(req: dict = Body(...),
+                           principal: APIKey = Depends(require_key)):
+        """Anthropic Messages API shape: scrub -> OpenAI-compatible upstream -> restore,
+        returning an Anthropic-format response. Text content only for now."""
+        enforce_limits(principal)
+        if req.get("stream"):
+            raise HTTPException(400, "Streaming is not yet supported on /v1/messages; "
+                                     "use /v1/chat/completions for streaming.")
+
+        def block_text(content) -> str:
+            if isinstance(content, str):
+                return content
+            if isinstance(content, list):
+                return "\n".join(b.get("text", "") for b in content
+                                 if isinstance(b, dict) and b.get("type") == "text")
+            return ""
+
+        oai_messages = []
+        system = req.get("system")
+        if system is not None:
+            sys_text = block_text(system)
+            if sys_text:
+                oai_messages.append({"role": "system", "content": sys_text})
+        for m in (req.get("messages") or []):
+            oai_messages.append({"role": m.get("role", "user"),
+                                 "content": block_text(m.get("content"))})
+
+        total_chars = sum(len(m["content"]) for m in oai_messages)
+        if total_chars > settings.max_input_chars:
+            raise HTTPException(413, f"Input exceeds {settings.max_input_chars} characters.")
+
+        scrubber = get_scrubber(settings.sensitivity)
+        sanitized, pmap, detections = scrubber.scrub_messages(oai_messages)
+        summary: dict[str, int] = {}
+        for d in detections:
+            summary[d.replacement_type] = summary.get(d.replacement_type, 0) + 1
+
+        model = req.get("model") or settings.default_model
+        params = {}
+        for src, dst in (("max_tokens", "max_tokens"), ("temperature", "temperature"),
+                         ("top_p", "top_p"), ("stop_sequences", "stop")):
+            if req.get(src) is not None:
+                params[dst] = req[src]
+        try:
+            resp = upstream_client().chat.completions.create(
+                model=model, messages=sanitized, **params,
+            )
+        except Exception as e:
+            logger.warning("upstream error: %s", e)
+            raise HTTPException(502, f"Upstream LLM error: {e}")
+
+        data = resp.model_dump()
+        choice = (data.get("choices") or [{}])[0]
+        text = pmap.restore((choice.get("message") or {}).get("content") or "")
+        usage = data.get("usage") or {}
+        tokens = usage.get("total_tokens", 0) or 0
+        app.state.limiter.add_tokens(principal.key, tokens)
+        audit(principal, "messages", summary, tokens, model)
+
+        stop_map = {"stop": "end_turn", "length": "max_tokens", "tool_calls": "tool_use"}
+        return {
+            "id": data.get("id", "msg"),
+            "type": "message",
+            "role": "assistant",
+            "model": model,
+            "content": [{"type": "text", "text": text}],
+            "stop_reason": stop_map.get(choice.get("finish_reason"), "end_turn"),
+            "usage": {"input_tokens": usage.get("prompt_tokens", 0),
+                      "output_tokens": usage.get("completion_tokens", 0)},
+            "x_preserve": {"pii_redacted": sum(summary.values()), "by_type": summary},
+        }
 
     @app.post("/v1/scrub", response_model=ScrubResponse)
     def scrub(req: ScrubRequest, principal: APIKey = Depends(require_key)):

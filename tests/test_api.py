@@ -183,6 +183,47 @@ def test_streaming_restores_split_placeholder():
     assert body.strip().endswith("data: [DONE]")
 
 
+def test_anthropic_messages_scrubs_and_restores():
+    client, fake = make_client()
+    r = client.post("/v1/messages", json={
+        "model": "test-model", "max_tokens": 100,
+        "system": "You are a helpful assistant.",
+        "messages": [{"role": "user", "content": "Contact jane@acme.com please"}],
+    }, headers=AUTH)
+    assert r.status_code == 200
+    sent = fake.chat.completions.last["messages"]
+    assert any(m["role"] == "system" for m in sent)
+    user_sent = [m for m in sent if m["role"] == "user"][-1]["content"]
+    assert "jane@acme.com" not in user_sent and "[EMAIL_1]" in user_sent
+    body = r.json()
+    assert body["type"] == "message" and body["role"] == "assistant"
+    assert body["content"][0]["type"] == "text"
+    assert "jane@acme.com" in body["content"][0]["text"]
+    assert "input_tokens" in body["usage"] and "output_tokens" in body["usage"]
+    assert body["x_preserve"]["by_type"]["EMAIL"] == 1
+
+
+def test_anthropic_messages_content_blocks():
+    client, fake = make_client()
+    r = client.post("/v1/messages", json={
+        "model": "test-model", "max_tokens": 50,
+        "messages": [{"role": "user",
+                      "content": [{"type": "text", "text": "SSN 123-45-6789 ok"}]}],
+    }, headers=AUTH)
+    assert r.status_code == 200
+    user_sent = [m for m in fake.chat.completions.last["messages"]
+                 if m["role"] == "user"][-1]["content"]
+    assert "123-45-6789" not in user_sent and "[SSN_1]" in user_sent
+
+
+def test_anthropic_messages_stream_rejected():
+    client, _ = make_client()
+    r = client.post("/v1/messages", json={
+        "messages": [{"role": "user", "content": "hi"}], "stream": True,
+    }, headers=AUTH)
+    assert r.status_code == 400
+
+
 def test_rate_limit():
     client, _ = make_client(rpm=1)
     assert client.post("/v1/scrub", json={"text": "a"}, headers=AUTH).status_code == 200
