@@ -231,6 +231,9 @@ class HybridNameScorer:
                 continue
             if not re.fullmatch(r"[\s,]*", text[w1.end():w2.start()]):
                 continue
+            # Short all-caps tokens are acronyms (MRN, DEA, NPI), not name parts.
+            if (t1.isupper() and len(t1) <= 4) or (t2.isupper() and len(t2) <= 4):
+                continue
 
             # Both must be in the name gazetteer
             r1 = self._nd.search(t1.capitalize())
@@ -354,6 +357,9 @@ class HybridNameScorer:
                     continue
                 if next_lower in SKIP_TOKENS:
                     continue
+                # Short all-caps tokens are acronyms (MRN, DEA), not names.
+                if next_word.isupper() and len(next_word) <= 4:
+                    break
 
                 # Check adjacency
                 if words[j].start() - words[j - 1].end() > 3:

@@ -225,7 +225,7 @@ PASSPORT_CONTEXTUAL = PIIPattern(
     name="passport_contextual",
     regex=re.compile(
         r"(?:passport\s*(?:#|number|no\.?)?[:\s]*)"
-        r"([A-Z0-9]{6,13})\b",
+        r"((?=[A-Z0-9]*\d)[A-Z0-9]{6,13})\b",  # require a digit (not a word like "office")
         re.IGNORECASE,
     ),
     min_sensitivity=SensitivityLevel.MINIMAL,
@@ -237,7 +237,7 @@ US_DRIVERS_LICENSE = PIIPattern(
     name="us_drivers_license",
     regex=re.compile(
         r"(?:driver'?s?\s*(?:license|licence|lic)\s*(?:#|number|no\.?)?[:\s]*)"
-        r"([A-Z0-9]{4,15})\b",
+        r"((?=[A-Z0-9]*\d)[A-Z0-9]{4,15})\b",  # require a digit (not a word like "renewal")
         re.IGNORECASE,
     ),
     min_sensitivity=SensitivityLevel.STANDARD,
@@ -249,7 +249,7 @@ MEDICAL_RECORD_NUMBER = PIIPattern(
     name="medical_record_number",
     regex=re.compile(
         r"(?:MRN|medical\s*record\s*(?:#|number|no\.?)?|chart\s*(?:#|number|no\.?)?)"
-        r"[:\s]*([A-Z0-9]{4,15})\b",
+        r"[:\s]*((?=[A-Z0-9]*\d)[A-Z0-9]{4,15})\b",  # require a digit (not a word like "record")
         re.IGNORECASE,
     ),
     min_sensitivity=SensitivityLevel.MINIMAL,

@@ -37,6 +37,17 @@ class TestNoFalsePositives:
             assert not any(d.replacement_type == "DOB" for d in result.detections), \
                 f"relative date -> DOB: {[d.matched_text for d in result.detections]}"
 
+    def test_context_id_keywords_not_capturing_words(self, scrubber):
+        # passport/MRN/driver-license keywords + a plain word must not be captured,
+        # and a short all-caps acronym (MRN) must not be read as a name.
+        for text in ("his MRN record was updated",
+                     "the passport office is closed",
+                     "driver license renewal reminder",
+                     "the patient's MRN record on file"):
+            result = scrubber.scrub(text)
+            assert result.pii_count == 0, \
+                f"FP in {text!r}: {[(d.matched_text, d.replacement_type) for d in result.detections]}"
+
     def test_policy_words_not_insurance_id(self, scrubber):
         # "policy"/"health insurance" + a plain word must not be an insurance ID;
         # a real ID has digits.

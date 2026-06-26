@@ -54,7 +54,7 @@ window.PRESERVE_PATTERNS = [
   },
   {
     "name": "passport_contextual",
-    "source": "(?:passport\\s*(?:#|number|no\\.?)?[:\\s]*)([A-Z0-9]{6,13})\\b",
+    "source": "(?:passport\\s*(?:#|number|no\\.?)?[:\\s]*)((?=[A-Z0-9]*\\d)[A-Z0-9]{6,13})\\b",
     "flags": "i",
     "group": 1,
     "sensitivity": "minimal",
@@ -64,7 +64,7 @@ window.PRESERVE_PATTERNS = [
   },
   {
     "name": "medical_record_number",
-    "source": "(?:MRN|medical\\s*record\\s*(?:#|number|no\\.?)?|chart\\s*(?:#|number|no\\.?)?)[:\\s]*([A-Z0-9]{4,15})\\b",
+    "source": "(?:MRN|medical\\s*record\\s*(?:#|number|no\\.?)?|chart\\s*(?:#|number|no\\.?)?)[:\\s]*((?=[A-Z0-9]*\\d)[A-Z0-9]{4,15})\\b",
     "flags": "i",
     "group": 1,
     "sensitivity": "minimal",
@@ -354,7 +354,7 @@ window.PRESERVE_PATTERNS = [
   },
   {
     "name": "us_drivers_license",
-    "source": "(?:driver'?s?\\s*(?:license|licence|lic)\\s*(?:#|number|no\\.?)?[:\\s]*)([A-Z0-9]{4,15})\\b",
+    "source": "(?:driver'?s?\\s*(?:license|licence|lic)\\s*(?:#|number|no\\.?)?[:\\s]*)((?=[A-Z0-9]*\\d)[A-Z0-9]{4,15})\\b",
     "flags": "i",
     "group": 1,
     "sensitivity": "standard",

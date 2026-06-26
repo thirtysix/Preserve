@@ -176,6 +176,7 @@
   const LAST = new Set(NAMES.last);
   const COMMON = new Set(NAMES.common);
   const inGaz = (t) => FIRST.has(t) || LAST.has(t);
+  const isAcronym = (w) => w.length <= 4 && w === w.toUpperCase() && w !== w.toLowerCase();
 
   const NAME_SKIP = new Set([
     "the","a","an","and","or","but","for","nor","yet","so","is","are","was",
@@ -278,6 +279,7 @@
       if (NAME_CONTEXT_WORDS.has(t1) || NAME_CONTEXT_WORDS.has(t2)) continue;
       if (s2 - e1 > 2) continue;
       if (!/^[\s,]*$/.test(text.slice(e1, s2))) continue;  // no pair across ':' etc.
+      if (isAcronym(w1) || isAcronym(w2)) continue;        // MRN, DEA, ... not names
       const pair = (FIRST.has(t1) && LAST.has(t2)) || (LAST.has(t1) && FIRST.has(t2));
       if (!pair) continue;
       if (COMMON.has(t1) && COMMON.has(t2)) continue;
@@ -306,6 +308,7 @@
         const nl = words[j][2].toLowerCase();
         if (TITLE_WORDS.has(nl) || INTRO_WORDS.has(nl) || NAME_CONTEXT_WORDS.has(nl) || NAME_SKIP.has(nl)) continue;
         if (words[j][0] - words[j - 1][1] > 3) break;
+        if (isAcronym(words[j][2])) break;   // MRN, DEA, ... not names
         if (inGaz(nl)) mk(words[j][0], words[j][1], 0.7);
         break;
       }

@@ -4,6 +4,14 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project aims to follow
 semantic versioning.
 
+## [Unreleased]
+
+### Fixed
+- Context-gated ID patterns (passport, driver's license, MRN) no longer capture a plain
+  word after the keyword ("passport office", "driver license renewal", "MRN record"): the
+  value must contain a digit (same fix as bank/insurance). Short all-caps acronyms (MRN,
+  DEA, ...) are no longer read as names. Library and demo.
+
 ## [0.6.0] - 2026-06-24
 
 ### Added
