@@ -362,7 +362,7 @@ CANADA_HEALTH = PIIPattern(
     name="canada_health",
     regex=re.compile(
         r"(?:health\s*card|OHIP|carte\s*sant[eé]|RAMQ|PHN|care\s*card)"
-        r"\s*(?:#|number|no\.?)?[:\s]*([A-Z0-9]{4,15})\b",
+        r"\s*(?:#|number|no\.?)?[:\s]*((?=[A-Z0-9]*\d)[A-Z0-9]{4,15})\b",  # require a digit
         re.IGNORECASE,
     ),
     min_sensitivity=SensitivityLevel.STANDARD,
@@ -374,7 +374,7 @@ GERMANY_PERSONALAUSWEIS = PIIPattern(
     name="germany_id",
     regex=re.compile(
         r"(?:Personalausweis|Ausweis|ID\s*(?:card|nummer|number))\s*"
-        r"(?:#|number|no\.?|Nr\.?)?[:\s]*([A-Z0-9]{9,10})\b",
+        r"(?:#|number|no\.?|Nr\.?)?[:\s]*((?=[A-Z0-9]*\d)[A-Z0-9]{9,10})\b",  # require a digit
         re.IGNORECASE,
     ),
     min_sensitivity=SensitivityLevel.STANDARD,

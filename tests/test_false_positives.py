@@ -43,7 +43,9 @@ class TestNoFalsePositives:
         for text in ("his MRN record was updated",
                      "the passport office is closed",
                      "driver license renewal reminder",
-                     "the patient's MRN record on file"):
+                     "the patient's MRN record on file",
+                     "health card services were updated",
+                     "Ausweis documents were attached"):
             result = scrubber.scrub(text)
             assert result.pii_count == 0, \
                 f"FP in {text!r}: {[(d.matched_text, d.replacement_type) for d in result.detections]}"

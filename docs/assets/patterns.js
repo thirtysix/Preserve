@@ -414,7 +414,7 @@ window.PRESERVE_PATTERNS = [
   },
   {
     "name": "canada_health",
-    "source": "(?:health\\s*card|OHIP|carte\\s*sant[eé]|RAMQ|PHN|care\\s*card)\\s*(?:#|number|no\\.?)?[:\\s]*([A-Z0-9]{4,15})\\b",
+    "source": "(?:health\\s*card|OHIP|carte\\s*sant[eé]|RAMQ|PHN|care\\s*card)\\s*(?:#|number|no\\.?)?[:\\s]*((?=[A-Z0-9]*\\d)[A-Z0-9]{4,15})\\b",
     "flags": "i",
     "group": 1,
     "sensitivity": "standard",
@@ -424,7 +424,7 @@ window.PRESERVE_PATTERNS = [
   },
   {
     "name": "germany_id",
-    "source": "(?:Personalausweis|Ausweis|ID\\s*(?:card|nummer|number))\\s*(?:#|number|no\\.?|Nr\\.?)?[:\\s]*([A-Z0-9]{9,10})\\b",
+    "source": "(?:Personalausweis|Ausweis|ID\\s*(?:card|nummer|number))\\s*(?:#|number|no\\.?|Nr\\.?)?[:\\s]*((?=[A-Z0-9]*\\d)[A-Z0-9]{9,10})\\b",
     "flags": "i",
     "group": 1,
     "sensitivity": "standard",
