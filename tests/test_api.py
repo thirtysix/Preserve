@@ -322,3 +322,19 @@ def test_chat_completions_forwards_tool_turns():
     assert sent[1]["tool_calls"][0]["id"] == "call_1" and "content" not in sent[1]
     assert sent[2]["tool_call_id"] == "call_1"
     assert "jane@acme.com" not in sent[2]["content"] and "[EMAIL_1]" in sent[2]["content"]
+
+
+def test_chat_completions_unknown_params_go_in_extra_body():
+    """Provider extensions (chat_template_kwargs) reach upstream via extra_body:
+    the OpenAI SDK raises TypeError on keyword arguments it does not know."""
+    client, fake = make_client()
+    r = client.post("/v1/chat/completions", json={
+        "model": "test-model", "temperature": 0.2,
+        "chat_template_kwargs": {"reasoning_effort": "low"},
+        "messages": [{"role": "user", "content": "hi"}],
+    }, headers=AUTH)
+    assert r.status_code == 200
+    kw = fake.chat.completions.last["kw"]
+    assert kw["temperature"] == 0.2
+    assert kw["extra_body"] == {"chat_template_kwargs": {"reasoning_effort": "low"}}
+    assert "chat_template_kwargs" not in kw

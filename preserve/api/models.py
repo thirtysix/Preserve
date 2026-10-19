@@ -2,9 +2,14 @@
 
 from __future__ import annotations
 
+import inspect
 from typing import Any, Optional
 
+from openai.resources.chat.completions import Completions
 from pydantic import BaseModel, Field
+
+# Keyword arguments chat.completions.create() accepts.
+_SDK_PARAMS = set(inspect.signature(Completions.create).parameters) - {"self"}
 
 
 # --- OpenAI-compatible chat completions ---
@@ -35,7 +40,14 @@ class ChatCompletionRequest(BaseModel):
         fields the gateway handles itself)."""
         handled = {"model", "messages", "stream"}
         extra = dict(self.__pydantic_extra__ or {})
-        return {k: v for k, v in extra.items() if k not in handled}
+        params = {k: v for k, v in extra.items() if k not in handled}
+        # The OpenAI SDK rejects keyword arguments it does not know (provider
+        # extensions such as chat_template_kwargs); those go in extra_body,
+        # which the SDK merges into the request JSON unchanged.
+        body = {k: params.pop(k) for k in list(params) if k not in _SDK_PARAMS}
+        if body:
+            params["extra_body"] = {**params.get("extra_body", {}), **body}
+        return params
 
 
 # --- Scrub / restore / detect ---
