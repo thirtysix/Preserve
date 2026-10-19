@@ -9,8 +9,14 @@ from pydantic import BaseModel, Field
 
 # --- OpenAI-compatible chat completions ---
 class ChatMessage(BaseModel):
+    """A chat message. Tool-calling turns are forwarded intact: an assistant
+    message may carry ``tool_calls`` with no content, and a ``tool`` message
+    carries ``tool_call_id`` (extra fields are kept, not dropped)."""
+
+    model_config = {"extra": "allow"}
+
     role: str
-    content: str
+    content: Optional[str] = None
     name: Optional[str] = None
 
 

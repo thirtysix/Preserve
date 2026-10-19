@@ -299,3 +299,26 @@ def test_rate_limiter_factory_falls_back_to_memory(monkeypatch):
     # Unreachable REDIS_URL -> still falls back (no crash)
     monkeypatch.setenv("REDIS_URL", "redis://127.0.0.1:6390/0")
     assert isinstance(get_rate_limiter(), RateLimiter)
+
+
+def test_chat_completions_forwards_tool_turns():
+    """A second tool-loop round: an assistant message with tool_calls and no
+    content, then a tool result. Both reach upstream intact, the tool result
+    scrubbed like any other content."""
+    client, fake = make_client()
+    r = client.post("/v1/chat/completions", json={
+        "model": "test-model",
+        "messages": [
+            {"role": "user", "content": "When can I apply?"},
+            {"role": "assistant", "content": None, "tool_calls": [
+                {"id": "call_1", "type": "function",
+                 "function": {"name": "lookup", "arguments": "{}"}}]},
+            {"role": "tool", "tool_call_id": "call_1",
+             "content": "Contact jane@acme.com for details"},
+        ],
+    }, headers=AUTH)
+    assert r.status_code == 200
+    sent = fake.chat.completions.last["messages"]
+    assert sent[1]["tool_calls"][0]["id"] == "call_1" and "content" not in sent[1]
+    assert sent[2]["tool_call_id"] == "call_1"
+    assert "jane@acme.com" not in sent[2]["content"] and "[EMAIL_1]" in sent[2]["content"]
