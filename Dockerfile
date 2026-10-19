@@ -4,9 +4,9 @@ FROM python:3.12-slim
 WORKDIR /app
 
 # Install only what the API needs (no spaCy/llama-cpp).
-COPY setup.py README.md ./
+COPY pyproject.toml README.md LICENSE ./
 COPY preserve ./preserve
-RUN pip install --no-cache-dir -e ".[api,redis]"
+RUN pip install --no-cache-dir ".[api,redis]"
 
 # Pre-warm the names-dataset / wordfreq caches so the first request isn't slow.
 RUN python -c "from preserve import Scrubber, PreserveConfig, SensitivityLevel; \

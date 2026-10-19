@@ -4,6 +4,18 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project aims to follow
 semantic versioning.
 
+## [0.6.2] - 2026-10-19
+
+### Fixed
+- Gateway: tool-calling turns are forwarded intact. An assistant message with `tool_calls`
+  and no content, and a `tool` message with `tool_call_id`, were rejected (422) or lost their
+  fields, so the second round of any tool loop failed. Tool results are scrubbed like other
+  content.
+- Gateway: provider-specific request fields (e.g. `chat_template_kwargs`, `top_k`) are sent
+  to the upstream via `extra_body`; the OpenAI SDK raised `TypeError` on them as keyword
+  arguments, so those requests failed.
+- Dockerfile: builds from `pyproject.toml` (it still copied the removed `setup.py`).
+
 ## [0.6.1] - 2026-06-26
 
 ### Fixed
